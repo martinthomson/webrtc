@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Realtime Peer-to-Peer Transport API</title>
+    <meta http-equiv='Content-Type' content='text/html;charset=utf-8'/>
+    <!--
+        === NOTA BENE ===
+        For the three scripts below, if your spec resides on dev.w3 you can check them
+        out in the same tree and use relative links so that they'll work offline,
+      -->
+    <script src='http://dev.w3.org/2009/dap/ReSpec.js/js/respec.js' class='remove'></script>
+    <script class='remove'>
+      var respecConfig = {
+      // specification status (e.g. WD, LCWD, NOTE, etc.). If in doubt use ED.
+      specStatus:           "ED",
+
+      // the specification's short name, as in http://www.w3.org/TR/short-name/
+      shortName:            "rt-transport",
+
+      // if your specification has a subtitle that goes below the main
+      // formal title, define it here
+      // subtitle   :  "Web API for establishing peer-to-peer transport",
+
+      // if you wish the publication date to be other than today, set this
+      // publishDate:  "2012-06-06",
+
+      // if the specification's copyright date is a range of years, specify
+      // the start date here:
+      // copyrightStart: "2012"
+
+      // if there is a previously published draft, uncomment this and set its YYYY-MM-DD date
+      // and its maturity status
+      // previousPublishDate:  "1977-03-15",
+      // previousMaturity:  "WD",
+
+      // if there a publicly available Editor's Draft, this is the link
+      edDraftURI:           "https://github.com/martinthomson/webrtc/realtime-transport.html",
+
+      // if this is a LCWD, uncomment and set the end of its review period
+      // lcEnd: "2009-08-05",
+
+      // if you want to have extra CSS, append them to this list
+      // it is recommended that the respec.css stylesheet be kept
+      extraCSS:             ["http://dev.w3.org/2009/dap/ReSpec.js/css/respec.css"],
+
+      // editors, add as many as you like
+      // only "name" is required
+      editors:  [
+      { name: "Martin Thomson", url: "mailto:martin.thomson@gmail.com",
+      company: "Microsoft", companyURL: "http://microsoft.com/" },
+      ],
+
+      // authors, add as many as you like.
+      // This is optional, uncomment if you have authors as well as editors.
+      // only "name" is required. Same format as editors.
+
+      //authors:  [
+      //    { name: "Your Name", url: "http://example.org/",
+      //      company: "Your Company", companyURL: "http://example.com/" },
+      //],
+
+      // name of the WG
+      wg:           "WebRTC Working Group",
+
+      // URI of the public WG page
+      wgURI:        "http://www.w3.org/standards/techs/webrtc",
+
+      // name (without the @w3c.org) of the public mailing to which comments are due
+      wgPublicList: "public-webrtc",
+
+      // URI of the patent status for this WG, for Rec-track documents
+      // !!!! IMPORTANT !!!!
+      // This is important for Rec-track documents, do not copy a patent URI from a random
+      // document unless you know what you're doing. If in doubt ask your friendly neighbourhood
+      // Team Contact.
+      wgPatentURI:  ""
+      };
+    </script>
+  </head>
+  <body>
+    <section id='abstract'>
+      <p>
+        This document describes how transport flows can be created in a browser. A transport flow is a construct that allows for bidirectional exchange of UDP packets. Chances are, these transport flows will be established between browsers.
+      </p>
+      <p>
+        The flow of packets is encrypted and&mdash;depending on the selected protocol&mdash;the browser is able to ensure that the recipient is willing to receive the flow. Setup is mediated by the web application.
+      </p>
+    </section>
+    <section>
+      <h2>Introduction</h2>
+      <p>
+        Establishing flows of realtime media to and from browsers requires a transport that is suited to this purpose.  This document describes how realtime transport flows can be created in a browser. A realtime transport flow is a construct that allows for bidirectional exchange of UDP packets.
+      </p>
+      <p>
+        UDP and RTP [[!RFC3550]] provide the means for the delivery of time-sensitive media between peers.  This channel is secured using SRTP [[!RFC3711]] with key negotiation in signaling or through DTLS.
+      </p>
+      <p>Establishing flows of UDP through middleboxes such as Network Address Translators (NAT) or firewalls requires the use of techniques such as Interactive Connectivity Establishment (ICE) [[!RFC5245]].  The provided API describes primitives that enable the implementation of ICE, but do not require it other than requiring the consent mechanisms that it provides, which is critical to the security of the web.
+      </p>
+      <p>
+        This API only deals with the creation of a secured transport between peers.  Sending media using this API is described in another document.
+      </p>
+    </section>
+
+    <section>
+      <h2>Requirements</h2>
+      <p>
+        The goal of this API is to:
+        <ul>
+          <li>establish a flow of packets between two peers</li>
+          <li>provide confidentiality for communications</li>
+          <li>ensure that media is not sent to unwilling hosts</li>
+        </ul>
+      </p>
+      <section>
+        <h3>Design Goals</h3>
+        <p>
+          It is possible to achieve the basic goals in a number of ways.  This design attempts to provide the maximum flexibility in the API, with minimal complexity.
+        </p>
+        <p>
+          To that end, the API ensures that the browser contains as little of the implementation of the transport establishment code as possible.  This provides the using application more control over application logic.
+        </p>
+        <p>
+          This API also reduces the amount of application state that the browser maintains.  This reduces the coupling of browser and application implementations, simplifies API interactions, gives applications greater control over browser behavior and enables the creation of more robust applications.  For example, a browser with less accumulated state can recover necessary state faster in the event of a reload than otherwise.
+        </p>
+      </section>
+      <section>
+        <h3>Non-Goals</h3>
+        <p>
+          It is not a goal of this API to provide an application with the ability to create minimal realtme applications.  Browser APIs rarely change once deployed, which means that a constraint imposed by an API is difficult to remove.  In complete contrast, applications on the web are able to evolve rapidly.  Moving the bulk of the necessary logic to application code ensures greater scope for innovation.  A simple set of basic primitives are better enablers.
+        </p>
+
+        <p>
+          The successful creation of RTP streams requires signaling.  How that signaling is performed is not the subject of standardization.
+        </p>
+      </section>
+    </section>
+    <section>
+      <h2>Overview</h2>
+      <p>
+        Establishing realtime media transport requires the interaction of two objects:
+        <ul>
+          <li>
+            The <a>Candidate</a> is the end point for a realtime transport.  This represents a UDP port, opened by the browser.  The Candidate encapsulates the functions necessary to perform an ICE negotiation [[!RFC5245]].
+          </li>
+          <li>
+            The <a>RealtimeTransport</a> is a peer-to-peer bearer for secured media.  It binds a local Candidate to a remote Candidate and enables the bidirectional exchange of media packets.
+          </li>
+        </ul>
+      </p>
+      <p>
+        A simple usage scenario involves the creation of one or more Candidate objects.  The browser allocates a local UDP port on each of the available network interfaces and returns these to the application.
+      </p>
+      <pre class="example">
+    Candidate.gatherLocalCandidates(function(candidates) {
+        signalingChannel.send('candidate', candidates);
+        localCandidates.push(candidates);
+    });
+      </pre>
+      <p>
+        Each candidate consists of an IP address, a port number, a username fragment and password.  This information is exchanged with the remote peer using whatever signaling mechanism is chosen by the application.
+      </p>
+      <p>
+        Other forms of candidate might be necessary for successful traversal of middleboxes like firewalls and NATs.
+      </p>
+      <pre class="example">
+    Candidate.allocateRelay(relay, function(error, relayCandidate) {
+        if (!error) {
+            signalingChannel.send('candidate', [ relayCandidate ]);
+        }
+    });
+      </pre>
+      <p>
+        Local and remote candidates are paired and connectivity checking is used for each pair to determine which candidates can be used for exchanging packets.
+      </p>
+      <pre class="example">
+    function receivePeerCandidates(remoteCandidates) {
+        var candidatePairs = localCandidates.forEach(function(local) {
+            return remoteCandidates.forEach(function(remote) {
+                local.check(remote, checkCallback(local, remote));
+            });
+        });
+    }
+      </pre>
+      <p>
+        Of the successful connectivity checks, one or more pairs are selected.  The local candidate is then used to create a <code><a>RealtimeTransport</a></code>.
+      </p>
+      <pre class="example">
+    function connectivityCheckSuccess(local, remote) {
+        local.createTransport(remote, options, function(err, transport) {
+            realtimeTransport = transport;
+        });
+    }
+      </pre>
+      <p>
+        The resulting transport object can be used to securely exchange media with the peer.
+      </p>
+    </section>
+
+    <section>
+      <h2>Candidate</h2>
+      <p>
+        A <code><dfn>Candidate</dfn></code> object represents an open UDP port.  The <code><a>Candidate</a></code> also encapsulates all the information necessary to find and use that port.
+      </p>
+
+      <section>
+        <h3>Simple Candidates</h3>
+
+        <dl title="[NoInterfaceObject] interface SimpleCandidate" class="idl">
+          <dt>attribute DOMString ip</dt>
+          <dd>
+            The IP address (v4 or v6) for the candidate.
+          </dd>
+
+          <dt>attribute unsigned short port</dt>
+          <dd>
+            The UDP port number for the candidate.
+          </dd>
+
+          <dt>attribute DOMString? ufrag</dt>
+          <dd>
+            The ICE username fragment for the candidate.
+          </dd>
+          <dt>attribute DOMString? username</dt>
+          <dd>
+            The username is used to specify the STUN <code>USERNAME</code> attribute explicitly.  If present, this parameter is used in preference to the username fragment.  See <a>server reflexive candidates</a> for an explanation of this parameter.
+          </dd>
+
+          <dt>attribute DOMString? pwd</dt>
+          <dd>
+            The ICE password for the candidate.
+          </dd>
+
+          <dt>attribute TurnRelayProtocol? turn</dt>
+          <dd>
+            The protocol to use for communication with a TURN relay.
+          </dd>
+        </dl>
+
+        <p>
+          An anonymous object can be created with the four essential properties (<code><a href="widl-SimpleCandidate-ip">ip</a></code>, <code><a href="#widl-SimpleCandidate-port">port</a></code>, <code><a href="#widl-SimpleCandidate-ufrag">ufrag</a></code>, and <code><a href="#widl-SimpleCandidate-pwd">pwd</a></code>) to represent a remote candidate.  By serializing a <code><a>Candidate</a></code> into JSON, only the essential properties are preserved.  Thus, it is trivial to signal candidates by serializing and deserializing <code><a>Candidate</a></code> objects.
+        </p>
+
+        <p>
+          The application cannot select or alter the values chosen for local candidates.  The browser MAY select any UDP port number, and MUST select values for ufrag and pwd that have sufficient random entropy that they cannot be easily guessed.  This guarantees that only entities that receive candidate information are able to successfully make a connectivity check.  It also allows peers to identify unique browsers.
+        </p>
+      </section>
+
+      <section>
+        <h3>Local Candidate</h3>
+        
+        <p>
+          A local <code><a>Candidate</a></code> provides limited access to the browsers STUN [[!RFC5389]] implementation which provides a means to trigger connectivity checking, the gathering of server reflexive addresses and allocation of TURN relays.
+        </p>
+
+        <dl title="interface Candidate : SimpleCandidate, EventTarget" class="idl">
+          <dt>static void gatherHostCandidates (CandidateCallback callback)</dt>
+          <dd>
+            Gather a set of host candidates.  Calls the provided callback when complete.
+          </dd>
+
+          <dt>static void allocateRelay (SimpleCandidate remote, RelayCallback callback)</dt>
+          <dd>
+            <a href="allocateRelay">Gather a relay candidate</a> using a newly created local base.
+          </dd>
+          <dt>void allocateRelay (SimpleCandidate remote, RelayCallback callback)</dt>
+          <dd>
+            <a href="allocateRelay">Gather a relay candidate</a> using this local candidate as the base.
+          </dd>
+          
+          <dt>[TreatNonCallableAsNull] attribute Function? onnetworkchange</dt>
+          <dd>
+            An event handler for being informed of <a href="#networkchange">changes to network connectivity</a>.  <b>Note:</b> Ideally, this would be globally registered, but apparently this is not possible.
+          </dd>
+
+          <dt>[TreatNonCallableAsNull] attribute Function? oncheck</dt>
+          <dd>
+            Called when a remote peer <a href="#serving">successfully performs a connectivity check</a> against this candidate.
+          </dd>
+
+          <dt>readonly attribute boolean open</dt>
+          <dd>
+            Whether the candidate is open and can be used.  This attribute is <code>true</code> when the object is passed to the application and <code>false</code> after the <a>close</a> method is invoked.
+          </dd>
+
+          <dt>any check (SimpleCandidate remote, ConnectivityCheckCallback callback, optional StunAttribute... attributes)</dt>
+          <dd>
+            Perform a <a href="#checking">connectivity check</a> on the remote candidate.  Returns a handle on the check that can be used to cancel it.
+          </dd>
+
+          <dt>void cancelCheck(any checkHandle)</dt>
+          <dd>
+            Cancel an outstanding or enqueued connectivity check.  This guarantees that the corresponding <code><a>ConnectivityCheckCallback</a></code> is never called.
+          </dd>
+        </dl>
+      </section>
+      
+      <section>
+        <h3>Candidate Lifecycle</h3>
+        <p>
+          A local Candidate is created by the browser in response to a call to <code>gatherLocalCandidates(<var>callback</var>)</code> or <code>allocateRelay(<var>callback</var>)</code>.  Each candidate is given to the application with the open attribute set to true. 
+        </p>
+
+        <section id="gatherLocalCandidates">
+          <h4>Gathering Host Candidates</h4>
+          <p>
+            Host candidates are ports that are opened on the local machine.  These candidates are allocated by the browser in response to a call to <code><a>Candidate</a>.<a>gatherLocalCandidates</a>(<var>callback</var>)</code>.
+          </p>
+
+          <p class="note">
+            The username fragment and password used in ICE is normally global.  That is, the same values are shared for all candidates in the same session.  Browsers that wish to interoperate with non-browser peers SHOULD provide the same value for ufrag and pwd as a result of each request to gather local candidates.
+          </p>
+        </section>
+
+        <section id="allocateRelay">
+          <h4>Allocating Relay Candidates</h4>
+          <p>
+            Relay candidates are allocated by calling <code><a>Candidate</a>.<dfn>allocateRelay</dfn>(<var>turnServerCandidate</var>, <var>callback</var>[, <var>attributes</var>])</code>.  The browser performs a TURN [[!RFC5766]] relay allocation with the identified host and provides a relay candidate to the provided callback.
+          </p>
+          <p>
+            A <var>turn</var> attribute can be set on the TURN server candidate to select the transport used between the browser and TURN server.  The <var>turn</var> attribute takes one of three values: <code>udp</code>, <code>tcp</code>, or <code>tls</code>.  The browser uses UDP to communicate with the TURN server unless otherwise specified.  The <var>turn</var> attribute only determines the transport used between browser and TURN server; UDP is the only supported transport between the server and remote peers.
+          </p>
+          <p>
+            Once the allocation has completed, the <var>callback</var> method is invoked.  An error parameter is set to an error code if the allocation fails.  A single candidate parameter is provided if the allocation is successful.
+          </p>
+          <pre class="example">
+    function createRelayCandidate() {
+        var relay = { ip: '192.0.2.75', port: 7754, username: 'user', password: 'password1' };
+        Candidate.allocateRelay(relay, function(error, relayCandidate) {
+            if (error) {
+                reportError(error);
+            } else {
+                signalingChannel.send('candidate', relayCandidate);
+                scheduleConnectivityChecks([ relayCandidate ]);
+            }
+        });
+    }
+          </pre>
+          <p>
+            In order to select a specific local candidate for the allocation of relays, the <code><a>allocateRelay</a></code> method can be called on a candidate instance.  This is only possible if the transport to the relay server is UDP.
+          </p>
+          <p>
+            Application-selected attributes can be added to the allocation request, just as they can be added to <a href="#checking">connectivity checks</a>.
+          </p>
+        </section>
+
+        <section>
+          <h4>Server Reflexive Candidates</h4>
+          <p>
+            Server reflexive candidates are gathered by making connectivity checks to STUN servers.  These do not require additional Candidate objects created by the browser because checks from peers will reach corresponding host candidates.
+          </p>
+          <p>
+            For a server reflexive address, the remote candidate can include several variations on the set of included authentication parameters:
+            <ul>
+              <li>
+                An ICE-compatible <a href="#checking">connectivity check</a> is invoked by providing ICE username fragment and password parameters.  The STUN <code>USERNAME</code> attribute is populated by concatenating the remote username fragment (<code><var>remoteCandidate</var>.ufrag</code>), a colon character (':') and the local username fragment.  The <code>MESSAGE-INTEGRITY</code> attribute is created using the remote password (<code><var>remoteCandidate</var>.pwd</code>) as described in [[!RFC5389]].
+              </li>
+              <li>
+                A <var>username</var> parameter can be provided in place of <var>ufrag</var>.  The browser uses the value of <var>username</var> for the STUN <code>USERNAME</code> attribute.  <code>MESSAGE-INTEGRITY</code> is filled as normal.
+              </li>
+              <li>
+                Both <var>ufrag</var> and <var>username</var> can be omitted to suppress the inclusion of the <code>USERNAME</code> attribute.
+              </li>
+              <li>
+                <var>pwd</var> can be omitted to suppress the inclusion of the <code>MESSAGE-INTEGRITY</code> attribute.
+              </li>
+            </ul>
+          </p>
+          <p>
+            A candidate pair is only marked as having active consent if the ICE-compatible connectivity check is used.  This ensures that STUN servers cannot be bombarded with media from browsers.
+          </p>
+          <p>
+            If long-term credentials are in use for the STUN server, as described in [[!RFC5389]], then the application is responsible for calculating the value of the password.
+          </p>
+        </section>
+
+        <section>
+          <h4>Closing Candidates</h4>
+          <p>
+            Candidates can be closed by calling <code><a>close</a>()</code>.  This sets the <var>open</var> attribute to false and closes any transports that use the candidate.   Any attempt to invoke methods on a closed candidate triggers an exception (though <code>status(<var>remoteCandidate</var>)</code> can harmlessly return <code>false</code>).
+          </p>
+        </section>
+      </section>
+
+      <section>
+        <h3>Connectivity Checking</h3>
+        <p>
+          To establish a bidirectional transport flow between peers, both are required to successfully complete one or more connectivity check requests.  Connectivity checks are used to open ports on NAT and firewall middleboxes, to validate end-to-end connectivity and to establish that the peer is willing to receive packets.
+        </p>
+
+        <section id="checking">
+          <h4>Sending Connectivity Checks</h4>
+          <p>
+            Applications can request the sending of a STUN Binding request to perform a connectivity check, collect candidates, or allocate relays.  The browser performs a connectivity check by sending a STUN Binding request using <code><var>candidate</var>.<a>check</a>(<var>remoteCandidate</var>, <var>callback</var>[, <var>attributes</var>])</code>.
+          </p>
+          <p>
+            The browser invokes the callback function if the connectivity check successfully completes.  The STUN request and response messages are passed to the callback.
+          </p>
+          <p>
+            Binding requests MUST be globally rate limited by the browser.  Any requests that cannot be immediately sent are enqueued.  A browser MAY limit the number of requests that it will enqueue; lower limits SHOULD be applied to individual origins to prevent origins from monopolizing access to this feature.
+          </p>
+          <p class="note">
+            ICE specifies a rate limiting function that is based on the expected bandwidth of media.  Since this depends on information provided by a potential web attacker, this input cannot be used.  The browser MUST rate limit connectivity checks based only on information that cannot be influenced or altered by a web attacker.
+          </p>
+          <p>
+            The browser is responsible for populating the STUN <code>USERNAME</code>, <code>MESSAGE-INTEGRITY</code> and <code>FINGERPRINT</code> attributes.  STUN attributes can be added or overwritten by including values in the optional <code><var>attributes</var></code> parameter.  STUN attributes specified in this manner are covered by the integrity check.  Attributes that would cause the STUN request to exceed its size limit cause an exception to be thrown.
+          </p>
+          <p>
+            DOMString values for <code><a href="#widl-SimpleCandidate-ufrag">ufrag</a></code> and <code><a href="#widl-SimpleCandidate-pwd">pwd</a></code> are encoded using UTF-8 [[!UTF-8]] in Binding requests.
+          </p>
+          <p>
+            Prior to the successful completion of a connectivity check, the browser MUST NOT reveal the transaction identifier to the application.  Knowing the transaction identifier of a STUN request prior to receiving a successful response would enable the spoofing of responses, potentially tricking the browser into sending media packets to an unwilling recipient.
+          </p>
+          <p>
+            The browser MUST limit the time that an outstanding connectivity check remains valid.  However, the browser is not responsible for providing a callback when this timer expires.  The application is responsible for looking after its own timers.
+          </p>
+        </section>
+
+        <section>
+          <h4>Tracking Valid Candidate Pairs</h4>
+          <p>
+            The browser is responsible for tracking valid remote candidate pairs.  Any time that a locally originated connectivity check succeeds, the browser marks the candidate pair (local candidate + remote candidate) as valid.  The valid marking lasts for a fixed duration.  The browser SHOULD keep a candidate pair valid for 40 seconds.
+          </p>
+          <p>
+            The browser MUST NOT send anything other than a connectivity check unless the candidate pair is valid.  This ensures that the remote peer has consented to receive packets and that the consent is recent.
+          </p>
+          <p>
+            The status of a candidate pair can be queried by using <code><var>candidate</var>.<a>status</a>(<var>remoteCandidate</var>)</code>.  This method returns <code>true</code> if a connectivity check between the two candidates succeeded recently.
+          </p>
+        </section>
+
+        <section id="serving">
+          <h4>Responding to Connectivity Checks</h4>
+          <p>
+            The browser responds to valid connectivity checks on all open candidates.  Received packets that do not conform with the following rules MUST be ignored:
+            <ul>
+              <li>
+                The packet is a STUN Binding request that contains the STUN magic cookie [[!RFC5389]].
+              </li>
+              <li>
+                The Binding request contains a <code>USERNAME</code> attribute that starts with the browser-assigned username fragment, plus a colon (ASCII 0x3a).
+              </li>
+              <li>
+                The Binding request contains a valid <code>MESSAGE-INTEGRITY</code> attribute that is calculated over the <code>USERNAME</code> attribute.
+              </li>
+              <li>
+                The Binding request contains a valid <code>FINGERPRINT</code> attribute.
+              </li>
+            </ul>
+          </p>
+          <p>
+            Applications can register a callback listener against a candidate.  This function is called when a valid connectivity check is received.  The callback signature is identical to the callback for locally originated conectivity checks.  Both the request and response message are passed to the callback.
+          </p>
+          <p>
+            Browsers respond to connectivity checks on each candidate that it creates.  The browser MUST limit the number of unique peers that it generates connectivity check responses for.  This ensures that the number of flows that can be created towards the browser from different browsers is limited.  This mitigates an attack where a web attacker shares candidate information with multiple browsers.
+          </p>
+        </section>
+      </section>
+
+      <section id="networkchange">
+        <h3>Network Interface Changes</h3>
+        <p>
+          Network interfaces are imperfect and impermanent.  They can change, appear and disappear with no warning, especially on mobile devices.  Reacting to changes in connectivity is a crucial part of providing good realtime transport.
+        </p>
+        <p>
+          The <code><dfn>networkchange</dfn></code> event is registered statically against the <code><a>Candidate</a></code> global object.
+        </p>
+        <p>
+          The browser fires a <code><a>networkchange</a></code> event when it detects a potential change in the status of the network.  Events that trigger this callback include changes to open network interfaces and the addition or removal of network interfaces.
+        </p>
+      </section>
+
+      <section>
+        <h3>Privacy Considerations</h3>
+        <p>
+          Applications that establish peer-to-peer transports require that the IP addresses of a peer are signaled to the remote peer.  This can pose a privacy exposure even though an IP address can only be loosely correlated with a person.  For instance, it is possible to use IP addresses to determine the physical location of a person.
+        </p>
+        <p>
+          In some applications, establishing a peer-to-peer transport occurs prior to establishing user consent for the session.  This can be necessary to remove the delays associated with transport setup that might otherwise occur after session acceptance.  Exposing IP address information prior to acceptance provides the initiator of the session a way to collect the IP address of even an unwilling peer.
+        </p>
+        <p>
+          Applications are encouraged to only signal relay candidates prior to gaining explicit consent from users.
+        </p>
+      </section>
+    </section>
+
+    <section>
+      <h2>Realtime Transport</h2>
+      
+    </section>
+    
+    <section class="appendix">
+      <h2>Acknowledgements</h2>
+      <p>
+        Many thanks to Matthew Kaufman who provided a few key suggestions that resulted in an almost total removal of browser-based state.
+      </p>
+    </section>
+  </body>
+</html>
