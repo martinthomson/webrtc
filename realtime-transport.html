@@ -19,7 +19,7 @@
 
       // if your specification has a subtitle that goes below the main
       // formal title, define it here
-      // subtitle   :  "Web API for establishing peer-to-peer transport",
+      subtitle   :  "Web API for establishing peer-to-peer transport",
 
       // if you wish the publication date to be other than today, set this
       // publishDate:  "2012-06-06",
@@ -76,6 +76,38 @@
       wgPatentURI:  ""
       };
     </script>
+    <style type="text/css">
+/* copied from pre.idl */
+pre.pseudoidl:before {
+    background: none repeat scroll 0 0 #90B8DE;
+    color: #FFFFFF;
+    content: "WebIDL";
+    display: block;
+    font-family: initial;
+    font-weight: bold;
+    margin: -1em 0 1em -1em;
+    padding: 3px;
+    width: 150px;
+}
+pre.pseudoidl {
+    border-bottom: 1px solid #90B8DE;
+    border-top: 1px solid #90B8DE;
+    line-height: 120%;
+    padding: 1em;
+}
+      </style>
+    <script>
+      // doesn't work because respec triggers idl processing on the class="idl".
+      // made too difficult because respec passes a string rather than DOM
+      function transformEnum(doc, content) {
+          var name = 'enumname'; 
+          var values = [ 'value1', 'value2' ];
+          return '<pre class="idl">\n    enum <span class="idlInterfaceID">' + name + '</span> {\n' +
+              '        ' + values.map(function(v) {
+                  return '"<a href="widl-' + name + '-' + v + '">' + v + '</a>"';
+              }).join(', ') + '\n    };\n</pre>\n' + content;
+      }
+    </script>
   </head>
   <body>
     <section id='abstract'>
@@ -106,11 +138,12 @@
       <p>
         The goal of this API is to:
         <ul>
-          <li>establish a flow of packets between two peers</li>
+          <li>establish a flow of packets between two peers suitable for carrying media</li>
           <li>provide confidentiality for communications</li>
-          <li>ensure that media is not sent to unwilling hosts</li>
+          <li>ensure that excessive packets are not sent to unwilling hosts</li>
         </ul>
       </p>
+
       <section>
         <h3>Design Goals</h3>
         <p>
@@ -123,6 +156,7 @@
           This API also reduces the amount of application state that the browser maintains.  This reduces the coupling of browser and application implementations, simplifies API interactions, gives applications greater control over browser behavior and enables the creation of more robust applications.  For example, a browser with less accumulated state can recover necessary state faster in the event of a reload than otherwise.
         </p>
       </section>
+
       <section>
         <h3>Non-Goals</h3>
         <p>
@@ -130,40 +164,58 @@
         </p>
 
         <p>
-          The successful creation of RTP streams requires signaling.  How that signaling is performed is not the subject of standardization.
+          The successful creation of RTP streams requires signaling.  Subjecting that signaling to standardization would constrain how it manifests, limiting the flexibility of applications that use these APIs.
         </p>
       </section>
     </section>
+
     <section>
       <h2>Overview</h2>
       <p>
         Establishing realtime media transport requires the interaction of two objects:
         <ul>
           <li>
-            The <a>Candidate</a> is the end point for a realtime transport.  This represents a UDP port, opened by the browser.  The Candidate encapsulates the functions necessary to perform an ICE negotiation [[!RFC5245]].
+            The <code><a>RealtimePort</a></code> is the end point for a realtime transport.  This represents a UDP port, opened by the browser.  The RealtimePort encapsulates the functions necessary to perform an ICE negotiation [[!RFC5245]].  In ICE terms, a <code><a>RealtimePort</a></code> is a local candidate.
           </li>
           <li>
-            The <a>RealtimeTransport</a> is a peer-to-peer bearer for secured media.  It binds a local Candidate to a remote Candidate and enables the bidirectional exchange of media packets.
+            The <code><a>RealtimeTransport</a></code> is a peer-to-peer bearer for secured media.  It binds a local <code><a>RealtimePort</a></code> to a remote <code><a>RealtimePort</a></code> and enables the bidirectional exchange of media packets.
           </li>
         </ul>
       </p>
       <p>
-        A simple usage scenario involves the creation of one or more Candidate objects.  The browser allocates a local UDP port on each of the available network interfaces and returns these to the application.
+        In order to establish a transport between a local peer and remote peer, the following process is applied:
+        <ol>
+          <li>
+            The local peer opens one or more realtime ports.
+          </li>
+          <li>
+            The local peer then has to learn of the ports that its remote peer has opened.  This uses a signaling channel specific to the application.  For instance, a web application could use previously HTTP requests or Websockets connections for this purpose.
+          </li>
+          <li>
+            A process of discovery is used to find a local and remote port pair (a candidate pair) that can exchange UDP packets.  One or more connectivity checks are made from different local ports toward different remote ports.  A successful connectivity check indicates that packets can reach the peer and that the peer consents to receive packets.  
+          </li>
+          <li>
+            Finally, a realtime transport is established on the pair of ports.  A security context is established so that secured media packets are able to flow in both directions between peers.  Realtime media streams can then be added to the transport.
+          </li>
+        </ol>
+      </p>
+      <p>
+        In the first step of this scenario one or more <code><a>RealtimePort</a></code> objects are created in different ways.  The browser allocates a local UDP port on each of the available network interfaces and returns these to the application.
       </p>
       <pre class="example">
-    Candidate.gatherLocalCandidates(function(candidates) {
-        signalingChannel.send('candidate', candidates);
-        localCandidates.push(candidates);
+    RealtimePort.openLocalPorts(function(ports) {
+        signalingChannel.send('candidates', ports);
+        localCandidates.push(ports);
     });
       </pre>
       <p>
         Each candidate consists of an IP address, a port number, a username fragment and password.  This information is exchanged with the remote peer using whatever signaling mechanism is chosen by the application.
       </p>
       <p>
-        Other forms of candidate might be necessary for successful traversal of middleboxes like firewalls and NATs.
+        Other forms of candidate might be necessary for successful traversal of middleboxes like firewalls and NATs.  For instance, a relay candidate uses a relay server to forward packets.  Because the relay server is publically reachable, many of the concerns with middlebox traversal do not apply to it, enabling communication in more challenging network conditions.
       </p>
       <pre class="example">
-    Candidate.allocateRelay(relay, function(error, relayCandidate) {
+    RealtimePort.allocateRelay(relay, function(error, relayCandidate) {
         if (!error) {
             signalingChannel.send('candidate', [ relayCandidate ]);
         }
@@ -173,9 +225,9 @@
         Local and remote candidates are paired and connectivity checking is used for each pair to determine which candidates can be used for exchanging packets.
       </p>
       <pre class="example">
-    function receivePeerCandidates(remoteCandidates) {
+    function receivePeerCandidates(remotePorts) {
         var candidatePairs = localCandidates.forEach(function(local) {
-            return remoteCandidates.forEach(function(remote) {
+            return remotePorts.forEach(function(remote) {
                 local.check(remote, checkCallback(local, remote));
             });
         });
@@ -197,113 +249,217 @@
     </section>
 
     <section>
-      <h2>Candidate</h2>
+      <h2>Realtime Ports</h2>
       <p>
-        A <code><dfn>Candidate</dfn></code> object represents an open UDP port.  The <code><a>Candidate</a></code> also encapsulates all the information necessary to find and use that port.
+        A <code><dfn>RealtimePort</dfn></code> object represents an open UDP port.  The <code><a>RealtimePort</a></code> also encapsulates all the information necessary to find and use that port.
       </p>
 
       <section>
-        <h3>Simple Candidates</h3>
+        <h3>The <code>RemoteRealtimePort</code> Object</h3>
 
-        <dl title="[NoInterfaceObject] interface SimpleCandidate" class="idl">
-          <dt>attribute DOMString ip</dt>
+        <p>
+          The <code><dfn>RemoteRealtimePort</dfn></code> object is used to describe a remote realtime port.  It is a simple dictionary of values, sufficient to describe how to connect to a remote peer.
+        </p>
+
+        <dl title="dictionary RemoteRealtimePort" class="idl">
+          <dt>DOMString ip</dt>
           <dd>
             The IP address (v4 or v6) for the candidate.
           </dd>
 
-          <dt>attribute unsigned short port</dt>
+          <dt>unsigned short port</dt>
           <dd>
             The UDP port number for the candidate.
           </dd>
 
-          <dt>attribute DOMString? ufrag</dt>
+          <dt>DOMString ufrag</dt>
           <dd>
             The ICE username fragment for the candidate.
           </dd>
-          <dt>attribute DOMString? username</dt>
+          <dt>DOMString username</dt>
           <dd>
-            The username is used to specify the STUN <code>USERNAME</code> attribute explicitly.  If present, this parameter is used in preference to the username fragment.  See <a>server reflexive candidates</a> for an explanation of this parameter.
+            The username is used to specify the STUN <code>USERNAME</code> attribute explicitly.  If present, this parameter is used in preference to the username fragment.  See <a>server reflexive candidate</a>s for an explanation of this parameter.
           </dd>
 
-          <dt>attribute DOMString? pwd</dt>
+          <dt>DOMString pwd</dt>
           <dd>
-            The ICE password for the candidate.
-          </dd>
-
-          <dt>attribute TurnRelayProtocol? turn</dt>
-          <dd>
-            The protocol to use for communication with a TURN relay.
+            The ICE password for the candidate.  This should be set unless this is being used to describe a STUN or TURN server that doesn't require authentication.
           </dd>
         </dl>
 
+      </section>
+
+      <section>
+        <h3>The <code>RealtimePort</code> Object</h3>
+        
         <p>
-          An anonymous object can be created with the four essential properties (<code><a href="widl-SimpleCandidate-ip">ip</a></code>, <code><a href="#widl-SimpleCandidate-port">port</a></code>, <code><a href="#widl-SimpleCandidate-ufrag">ufrag</a></code>, and <code><a href="#widl-SimpleCandidate-pwd">pwd</a></code>) to represent a remote candidate.  By serializing a <code><a>Candidate</a></code> into JSON, only the essential properties are preserved.  Thus, it is trivial to signal candidates by serializing and deserializing <code><a>Candidate</a></code> objects.
+          A local <code><a>RealtimePort</a></code> provides limited access to the browsers STUN [[!RFC5389]] implementation which provides a means to trigger connectivity checking, the gathering of server reflexive addresses and allocation of TURN relays.
         </p>
 
         <p>
           The application cannot select or alter the values chosen for local candidates.  The browser MAY select any UDP port number, and MUST select values for ufrag and pwd that have sufficient random entropy that they cannot be easily guessed.  This guarantees that only entities that receive candidate information are able to successfully make a connectivity check.  It also allows peers to identify unique browsers.
         </p>
-      </section>
 
-      <section>
-        <h3>Local Candidate</h3>
-        
-        <p>
-          A local <code><a>Candidate</a></code> provides limited access to the browsers STUN [[!RFC5389]] implementation which provides a means to trigger connectivity checking, the gathering of server reflexive addresses and allocation of TURN relays.
-        </p>
-
-        <dl title="interface Candidate : SimpleCandidate, EventTarget" class="idl">
-          <dt>static void gatherHostCandidates (CandidateCallback callback)</dt>
+        <dl title="interface RealtimePort : EventTarget" class="idl">
+          <dt>readonly attribute DOMString ip</dt>
           <dd>
-            Gather a set of host candidates.  Calls the provided callback when complete.
+            The IP address (v4 or v6) for the candidate.
           </dd>
 
-          <dt>static void allocateRelay (SimpleCandidate remote, RelayCallback callback)</dt>
+          <dt>readonly attribute unsigned short port</dt>
           <dd>
-            <a href="allocateRelay">Gather a relay candidate</a> using a newly created local base.
+            The UDP port number for the candidate.
           </dd>
-          <dt>void allocateRelay (SimpleCandidate remote, RelayCallback callback)</dt>
+
+          <dt>readonly attribute DOMString ufrag</dt>
           <dd>
-            <a href="allocateRelay">Gather a relay candidate</a> using this local candidate as the base.
+            The ICE username fragment for the candidate.
+          </dd>
+
+          <dt>readonly attribute DOMString pwd</dt>
+          <dd>
+            The ICE password for the candidate.
+          </dd>
+
+          <dt>static void openLocalPorts (RealtimePortCallback callback)</dt>
+          <dd>
+            Open ports on the local host.  One port is opened for each network interface on the host.  Calls the provided callback when complete.
+          </dd>
+
+          <dt>static void allocateRelay (TurnServer turnServer, RealtimePortCallback callback)</dt>
+          <dd>
+            <a href="allocateRelay">Allocate a relay port on a TURN server</a> using a newly created local base.
+          </dd>
+          <dt>void allocateRelay (TurnServer turnServer, RelayCallback callback)</dt>
+          <dd>
+            <a href="allocateRelay">Allocate a relay port on a TURN server</a> over UDP using this local candidate as the base.
           </dd>
           
           <dt>[TreatNonCallableAsNull] attribute Function? onnetworkchange</dt>
           <dd>
-            An event handler for being informed of <a href="#networkchange">changes to network connectivity</a>.  <b>Note:</b> Ideally, this would be globally registered, but apparently this is not possible.
+            An event handler for being informed of <a href="#networkchange">changes to network connectivity</a>.  <b>Note</b>: This is a candidate for moving to <code>navigator</code> or even the <a href="http://www.w3.org/TR/netinfo-api/">network information API</a>.
           </dd>
 
-          <dt>[TreatNonCallableAsNull] attribute Function? oncheck</dt>
+          <dt>[TreatNonCallableAsNull] attribute ConnectivityCheckEventHandler? onchecksent</dt>
           <dd>
-            Called when a remote peer <a href="#serving">successfully performs a connectivity check</a> against this candidate.
+            Called when a <a href="#checking">connectivity check</a> is sent to a remote peer.  The event passed MUST NOT include the STUN Binding request.
+          </dd>
+
+          <dt>[TreatNonCallableAsNull] attribute ConnectivityCheckEventHandler? onchecksuccess</dt>
+          <dd>
+            Called when a valid <a href="#checking">connectivity check</a> response is received from a remote peer.
+          </dd>
+
+          <dt>[TreatNonCallableAsNull] attribute ConnectivityCheckEventHandler? onremotecheck</dt>
+          <dd>
+            Called when a remote peer <a href="#serving">successfully performs a connectivity check</a> against this port.
+          </dd>
+
+          <dt>[TreatNonCallableAsNull] attribute Function? onclose</dt>
+          <dd>
+            Invoked when the realtime port is closed.
           </dd>
 
           <dt>readonly attribute boolean open</dt>
           <dd>
-            Whether the candidate is open and can be used.  This attribute is <code>true</code> when the object is passed to the application and <code>false</code> after the <a>close</a> method is invoked.
+            Whether the port is open and can be used.  This attribute is <code>true</code> when the object is passed to the application and <code>false</code> after the <a>close</a> method is invoked.
           </dd>
 
-          <dt>any check (SimpleCandidate remote, ConnectivityCheckCallback callback, optional StunAttribute... attributes)</dt>
+          <dt>long check (RemoteRealtimePort remote, optional StunAttribute... attributes)</dt>
           <dd>
-            Perform a <a href="#checking">connectivity check</a> on the remote candidate.  Returns a handle on the check that can be used to cancel it.
+            Perform a <a href="#checking">connectivity check</a> on the remote port.  Returns a handle on the check that can be used to <a href="#widl-RealtimePort-cancelCheck">cancel</a> it.
           </dd>
 
-          <dt>void cancelCheck(any checkHandle)</dt>
+          <dt>void cancelCheck (long checkHandle)</dt>
           <dd>
-            Cancel an outstanding or enqueued connectivity check.  This guarantees that the corresponding <code><a>ConnectivityCheckCallback</a></code> is never called.
+            Cancel an outstanding or enqueued connectivity check.  This guarantees that a <code><a>onchecksuccess</a></code> event is never triggered for the specified check.
+          </dd>
+
+          <dt>boolean status (RemoteRealtimePort remoteRealtimePort)</dt>
+          <dd>
+            Query the status of a particular remote port with respect to this port.  Returns <code>true</code> iff the remote port was successfully checked recently.  The specific time is based on the browser's configured consent expiration timer.
+          </dd>
+
+          <dt>void close ()</dt>
+          <dd>
+            Closes the port and any associated open transports that use the port.
           </dd>
         </dl>
+
+        <section>
+          <h4>The <code>RealtimePortCallback</code> Callback Function</h4>
+          <p>
+            The <code><dfn>RealtimePortCallback</dfn></code> callback function is passed to <code><a>openLocalPorts</a></code> or <code><a>allocateRelay</a></code>.   When the port is either successfully opened, or opening fails, the callback is invoked.  Opening local ports cannot fail.  Allocating a TURN relay port creates a single port.
+          </p>
+          <pre class="pseudoidl">
+<span id="idl-def-RealtimePortCallback" class="idlCallback">callback <span class="idlDictionaryID">RealtimePortCallback</span> = void (<span class="idlParamType">DOMString?</span> <span class="idlParamName">error</span>, <span class="idlParamType"><a class="idlType" href="#idl-def-RealtimePort">RealtimePort</a>[]</span> <span class="idlParamName">ports</span>);</span>
+          </pre>
+          <p>
+            The error parameter is set to <code>null</code> unless the allocation fails, in which case it contains a <code>DOMString</code> that explains the reasons for the error.  (Ed: Need to specify error code values here.)
+          </p>
+        </section>
+        
+        <section>
+          <h4>The <code>ConnectivityCheckEventHandler</code> Callback Function</h4>
+
+          <p>
+            This callback is invoked with an event whenever a connectivity check event occurs.  This is tied to the following events:
+            <ul>
+              <li>
+                <b><code>onremotecheck</code></b>&mdash;when a valid connectivity check is made by a remote peer
+              </li>
+              <li>
+                <b><code>onchecksent</code></b>&mdash;when a connectivity check is made by the browser
+              </li>
+              <li>
+                <b><code>onchecksuccess</code></b>&mdash;when a connectivity check succeeds
+              </li>
+            </ul>
+          </p>
+          <pre class="pseudoidl">
+<span id="idl-def-ConnectivityCheckEventHandler" class="idlCallback">callback <span class="idlDictionaryID">ConnectivityCheckEventHandler</span> = void (<span class="idlParamType"><a class="idlType" href="#idl-def-ConnectivityCheckEvent">ConnectivityCheckEvent</a></span> <span class="idlParamName">event</span>);</span>
+          </pre>
+        </section>
+
+        <section>
+          <h4>The <code>ConnectivityCheckEvent</code> Interface</h4>
+
+          <p>
+            The event object passed to the <code>ConnectivityCheckEventHandler</code> includes a target of the local port, the remote port and information on the STUN Binding request and Binding response messages that triggered the event.  
+          </p>
+          <p>
+            The <code>onchecksent</code> event does not include either STUN message because revealing the STUN transaction identifier chosen by the browser could allow a web attacker to spoof a response.
+          </p>
+
+        <dl title="interface ConnectivityCheckEvent : Event" class="idl">
+          <dt>attribute RemoteRealtimePort remote</dt>
+          <dd>
+            This identifies the remote candidate involved in this connectivity check.  For incoming checks, the remote candidate information only includes <code>ip</code> and <code>port</code>.
+          </dd>
+          
+          <dt>attribute StunBinding? request</dt>
+          <dd>
+            For the <code>onchecksuccess</code> and <code>onremotecheck</code> events, this includes the STUN Binding request that was respectively sent or received.  For the <code>onchecksent</code> event, this attribute is <code>null</code>.
+          </dd>
+
+          <dt>attribute StunBinding? response</dt>
+          <dd>
+            For the <code>onchecksuccess</code> and <code>onremotecheck</code> events, this includes the STUN Binding response that was respectively received or sent.  For the <code>onchecksent</code> event, this attribute is <code>null</code>.
+          </dd>
+        </dl>
+        </section>
       </section>
       
       <section>
-        <h3>Candidate Lifecycle</h3>
+        <h3><code>RealtimePort</code> Lifecycle</h3>
         <p>
-          A local Candidate is created by the browser in response to a call to <code>gatherLocalCandidates(<var>callback</var>)</code> or <code>allocateRelay(<var>callback</var>)</code>.  Each candidate is given to the application with the open attribute set to true. 
+          A local RealtimePort is created by the browser in response to a call to <code><a href="#widl-RealtimePort-openLocalPorts">openLocalPorts</a>(<var>callback</var>)</code> or <code><a href="#widl-RealtimePort-allocateRelay">allocateRelay</a>(<var>callback</var>)</code>.  Each candidate is given to the application with the open attribute set to true. 
         </p>
 
-        <section id="gatherLocalCandidates">
+        <section id="openLocalPorts">
           <h4>Gathering Host Candidates</h4>
           <p>
-            Host candidates are ports that are opened on the local machine.  These candidates are allocated by the browser in response to a call to <code><a>Candidate</a>.<a>gatherLocalCandidates</a>(<var>callback</var>)</code>.
+            Host-local ports (host candidates in ICE) are UDP ports that are opened on the local host.  These ports are opened by the browser in response to a call to <code><a>RealtimePort</a>.<a href="#widl-RealtimePort-openLocalPorts">openLocalPorts</a>(<var>callback</var>)</code>.
           </p>
 
           <p class="note">
@@ -311,48 +467,21 @@
           </p>
         </section>
 
-        <section id="allocateRelay">
-          <h4>Allocating Relay Candidates</h4>
-          <p>
-            Relay candidates are allocated by calling <code><a>Candidate</a>.<dfn>allocateRelay</dfn>(<var>turnServerCandidate</var>, <var>callback</var>[, <var>attributes</var>])</code>.  The browser performs a TURN [[!RFC5766]] relay allocation with the identified host and provides a relay candidate to the provided callback.
-          </p>
-          <p>
-            A <var>turn</var> attribute can be set on the TURN server candidate to select the transport used between the browser and TURN server.  The <var>turn</var> attribute takes one of three values: <code>udp</code>, <code>tcp</code>, or <code>tls</code>.  The browser uses UDP to communicate with the TURN server unless otherwise specified.  The <var>turn</var> attribute only determines the transport used between browser and TURN server; UDP is the only supported transport between the server and remote peers.
-          </p>
-          <p>
-            Once the allocation has completed, the <var>callback</var> method is invoked.  An error parameter is set to an error code if the allocation fails.  A single candidate parameter is provided if the allocation is successful.
-          </p>
-          <pre class="example">
-    function createRelayCandidate() {
-        var relay = { ip: '192.0.2.75', port: 7754, username: 'user', password: 'password1' };
-        Candidate.allocateRelay(relay, function(error, relayCandidate) {
-            if (error) {
-                reportError(error);
-            } else {
-                signalingChannel.send('candidate', relayCandidate);
-                scheduleConnectivityChecks([ relayCandidate ]);
-            }
-        });
-    }
-          </pre>
-          <p>
-            In order to select a specific local candidate for the allocation of relays, the <code><a>allocateRelay</a></code> method can be called on a candidate instance.  This is only possible if the transport to the relay server is UDP.
-          </p>
-          <p>
-            Application-selected attributes can be added to the allocation request, just as they can be added to <a href="#checking">connectivity checks</a>.
-          </p>
-        </section>
-
         <section>
-          <h4>Server Reflexive Candidates</h4>
+          <h4>Discovering Server Reflexive Candidates</h4>
           <p>
-            Server reflexive candidates are gathered by making connectivity checks to STUN servers.  These do not require additional Candidate objects created by the browser because checks from peers will reach corresponding host candidates.
+            A <dfn>server reflexive candidate</dfn> is a candidate, as seen by a server.  The server reports the address that it sees when the browser sends it a packet.  Where there are network address translation (NAT) middleboxes between the browser and the server, this reveals the translated address at the NAT, a value that might be undetectable from the browser.
           </p>
           <p>
-            For a server reflexive address, the remote candidate can include several variations on the set of included authentication parameters:
+            Server reflexive candidates are gathered by making connectivity checks to STUN servers from a specific host candidate.  The server provides the address that it sees in the <code>XOR-MAPPED-ADDRESS</code> attribute of the response.
+          </p>
+          <p>Using a server reflexive address ultimately results in packets arriving at the corresponding host candidate.  Therefore, server reflexive addresses do not require the creation of additional <code><a>RealtimePort</a></code> objects in the browser.
+          </p>
+          <p>
+            The <a href="#checking">connectivity check</a> interface is used to send queries to STUN servers.  When querying a STUN server, the remote candidate can include several variations on the set of included options:
             <ul>
               <li>
-                An ICE-compatible <a href="#checking">connectivity check</a> is invoked by providing ICE username fragment and password parameters.  The STUN <code>USERNAME</code> attribute is populated by concatenating the remote username fragment (<code><var>remoteCandidate</var>.ufrag</code>), a colon character (':') and the local username fragment.  The <code>MESSAGE-INTEGRITY</code> attribute is created using the remote password (<code><var>remoteCandidate</var>.pwd</code>) as described in [[!RFC5389]].
+                An ICE-compatible <a href="#checking">connectivity check</a> is invoked by providing ICE username fragment and password parameters.  The STUN <code>USERNAME</code> attribute is populated by concatenating the remote username fragment (<code><var>remotePort</var>.ufrag</code>), a colon character (':') and the local username fragment.  The <code>MESSAGE-INTEGRITY</code> attribute is created using the remote password (<code><var>remotePort</var>.pwd</code>) as described in [[!RFC5389]].
               </li>
               <li>
                 A <var>username</var> parameter can be provided in place of <var>ufrag</var>.  The browser uses the value of <var>username</var> for the STUN <code>USERNAME</code> attribute.  <code>MESSAGE-INTEGRITY</code> is filled as normal.
@@ -373,10 +502,72 @@
           </p>
         </section>
 
-        <section>
-          <h4>Closing Candidates</h4>
+        <section id="allocateRelay">
+          <h4>Allocating Relay Candidates</h4>
           <p>
-            Candidates can be closed by calling <code><a>close</a>()</code>.  This sets the <var>open</var> attribute to false and closes any transports that use the candidate.   Any attempt to invoke methods on a closed candidate triggers an exception (though <code>status(<var>remoteCandidate</var>)</code> can harmlessly return <code>false</code>).
+            Relay candidates are allocated by calling <code><a>RealtimePort</a>.<dfn>allocateRelay</dfn>(<var>turnServerRealtimePort</var>, <var>callback</var>[, <var>attributes</var>])</code>.  The browser performs a TURN [[!RFC5766]] relay allocation with the identified host and provides a relay candidate to the provided callback.
+          </p>
+          <p>
+            A <var>turn</var> attribute can be set on the TURN server candidate to select the transport used between the browser and TURN server.  The <var>turn</var> attribute takes one of three values: <code>udp</code>, <code>tcp</code>, or <code>tls</code>.  The browser uses UDP to communicate with the TURN server unless otherwise specified.  The <var>turn</var> attribute only determines the transport used between browser and TURN server; UDP is the only supported transport between the server and remote peers.
+          </p>
+          <p>
+            Once the allocation has completed, the <var>callback</var> method is invoked.  An error parameter is set to an error code if the allocation fails.  A single candidate parameter is provided if the allocation is successful.
+          </p>
+          <pre class="example">
+    function createRelayCandidate() {
+        var relay = { ip: '192.0.2.75', port: 7754, username: 'user', password: 'password1', turn: 'udp' };
+        RealtimePort.allocateRelay(relay, function(error, relayCandidate) {
+            if (error) {
+                reportError(error);
+            } else {
+                signalingChannel.send('candidate', [ relayCandidate ]);
+                scheduleConnectivityChecks([ relayCandidate ]);
+            }
+        });
+    }
+          </pre>
+          <p>
+            In order to select a specific local candidate for the allocation of relays, the <code><a>allocateRelay</a></code> method can be called on a candidate instance.  This is only possible if the transport to the relay server is UDP.
+          </p>
+          <p>
+            Application-selected attributes can be added to the allocation request, just as they can be added to <a href="#checking">connectivity checks</a>.
+          </p>
+          
+          <dl title="dictionary TurnServer : RemoteRealtimePort" class="idl">
+            <dt>TurnRelayTransport turn = "udp"</dt>
+            <dd>
+              The protocol to use for communication with a TURN relay.
+            </dd>
+          </dl>
+          
+          <pre class="pseudoidl">
+enum <span class="idlInterfaceID"><a id="">TurnRelayTransport</a></span> {
+    "<a href="#widl-TurnRelayTransport-udp">udp</a>", "<a href="#widl-TurnRelayTransport-udp">tcp</a>", "<a href="#widl-TurnRelayTransport-udp">tls</a>"
+};
+          </pre>
+          <!-- <dl title="[NoInterfaceObject] enum TurnRelayTransport" class="enum" data-transform="transformEnum">-->
+          <dl class="attributes">
+            <dt id="widl-TurnRelayTransport-udp"><code>udp</code></dt>
+            <dd>
+              Use UDP transport between the browser and the TURN relay server.  This is the default value.
+            </dd>
+
+            <dt id="widl-TurnRelayTransport-tcp"><code>tcp</code></dt>
+            <dd>
+              Use TCP transport between the browser and the TURN relay server.
+            </dd>
+
+            <dt id="widl-TurnRelayTransport-tls"><code>tls</code></dt>
+            <dd>
+              Use TLS over TCP transport between the browser and the TURN relay server.
+            </dd>
+          </dl>
+        </section>
+        
+        <section>
+          <h4>Closing <code>RealtimePort</code>s</h4>
+          <p>
+            RealtimePorts can be closed by calling <code><a href="#widl-RealtimePort-close">close</a>()</code>.  This sets the <var>open</var> attribute to false and closes any transports that use the candidate.   Any attempt to invoke methods on a closed candidate triggers an exception (though <code>status(<var>remotePort</var>)</code> can harmlessly return <code>false</code>).
           </p>
         </section>
       </section>
@@ -390,7 +581,7 @@
         <section id="checking">
           <h4>Sending Connectivity Checks</h4>
           <p>
-            Applications can request the sending of a STUN Binding request to perform a connectivity check, collect candidates, or allocate relays.  The browser performs a connectivity check by sending a STUN Binding request using <code><var>candidate</var>.<a>check</a>(<var>remoteCandidate</var>, <var>callback</var>[, <var>attributes</var>])</code>.
+            Applications can request the sending of a STUN Binding request to perform a connectivity check, collect candidates, or allocate relays.  The browser performs a connectivity check by sending a STUN Binding request using <code><var>candidate</var>.<a>check</a>(<var>remotePort</var>, <var>callback</var>[, <var>attributes</var>])</code>.
           </p>
           <p>
             The browser invokes the callback function if the connectivity check successfully completes.  The STUN request and response messages are passed to the callback.
@@ -405,7 +596,7 @@
             The browser is responsible for populating the STUN <code>USERNAME</code>, <code>MESSAGE-INTEGRITY</code> and <code>FINGERPRINT</code> attributes.  STUN attributes can be added or overwritten by including values in the optional <code><var>attributes</var></code> parameter.  STUN attributes specified in this manner are covered by the integrity check.  Attributes that would cause the STUN request to exceed its size limit cause an exception to be thrown.
           </p>
           <p>
-            DOMString values for <code><a href="#widl-SimpleCandidate-ufrag">ufrag</a></code> and <code><a href="#widl-SimpleCandidate-pwd">pwd</a></code> are encoded using UTF-8 [[!UTF-8]] in Binding requests.
+            DOMString values for <code><a href="#widl-RemoteRealtimePort-ufrag">ufrag</a></code> and <code><a href="#widl-RemoteRealtimePort-pwd">pwd</a></code> are encoded using UTF-8 [[!UTF-8]] in Binding requests.
           </p>
           <p>
             Prior to the successful completion of a connectivity check, the browser MUST NOT reveal the transaction identifier to the application.  Knowing the transaction identifier of a STUN request prior to receiving a successful response would enable the spoofing of responses, potentially tricking the browser into sending media packets to an unwilling recipient.
@@ -413,10 +604,11 @@
           <p>
             The browser MUST limit the time that an outstanding connectivity check remains valid.  However, the browser is not responsible for providing a callback when this timer expires.  The application is responsible for looking after its own timers.
           </p>
+
         </section>
 
-        <section>
-          <h4>Tracking Valid Candidate Pairs</h4>
+        <section id="tracking">
+          <h4>Tracking Valid <code>RealtimePort</code> Pairs</h4>
           <p>
             The browser is responsible for tracking valid remote candidate pairs.  Any time that a locally originated connectivity check succeeds, the browser marks the candidate pair (local candidate + remote candidate) as valid.  The valid marking lasts for a fixed duration.  The browser SHOULD keep a candidate pair valid for 40 seconds.
           </p>
@@ -424,7 +616,7 @@
             The browser MUST NOT send anything other than a connectivity check unless the candidate pair is valid.  This ensures that the remote peer has consented to receive packets and that the consent is recent.
           </p>
           <p>
-            The status of a candidate pair can be queried by using <code><var>candidate</var>.<a>status</a>(<var>remoteCandidate</var>)</code>.  This method returns <code>true</code> if a connectivity check between the two candidates succeeded recently.
+            The status of a candidate pair can be queried by using <code><var>candidate</var>.<a>status</a>(<var>remotePort</var>)</code>.  This method returns <code>true</code> if a connectivity check between the two candidates succeeded recently.
           </p>
         </section>
 
@@ -462,7 +654,10 @@
           Network interfaces are imperfect and impermanent.  They can change, appear and disappear with no warning, especially on mobile devices.  Reacting to changes in connectivity is a crucial part of providing good realtime transport.
         </p>
         <p>
-          The <code><dfn>networkchange</dfn></code> event is registered statically against the <code><a>Candidate</a></code> global object.
+          The <code><dfn>networkchange</dfn></code> event is registered against a local <code><a>RealtimePort</a></code>.
+        </p>
+        <p class="note">
+          Ideally, this would be globally registered, but since <code><a>RealtimePort</a></code> doesn't have a constructor, this might not be necessary.
         </p>
         <p>
           The browser fires a <code><a>networkchange</a></code> event when it detects a potential change in the status of the network.  Events that trigger this callback include changes to open network interfaces and the addition or removal of network interfaces.
@@ -486,12 +681,44 @@
     <section>
       <h2>Realtime Transport</h2>
       
+      <p>
+        A <dfn>RealtimeTransport</dfn> represents the flow of packets between a local and remote candidate.
+      </p>
+      <p>
+      </p>
+      <section>
+        <h3>The <code>RealtimeTransport</code> Object</h3>
+        <dl title="interface RealtimeTransport : EventTarget" class="idl">
+          <dt>RealtimeTransport createTransport (RealtimePort local, RemoteRealtimePort remote, TransportOptions options, TransportCallback callback)</dt>
+          <dd>
+            Factory method for creating a transport.
+          </dd>
+          
+          <dt>readonly attribute boolean open</dt>
+          <dd>
+            Whether the transport is currently open and able to exchange data.  Newly created transports are 
+          </dd>
+        </dl>
+      </section>
+
+      <section>
+        <h3>Transport Creation Options</h3>
+        <p>
+          Specifying <code><dfn>TransportOptions</dfn></code> can be used to alter the characteristics of a transport.
+        </p>
+        <dl title="dictionary TransportOptions">
+          <dt>RealtimeTransportMode mode = "dtls-srtp"</dt>
+          <dd>
+            The mode used for the transport.
+          </dd>
+        </dl>
+      </section>
     </section>
     
     <section class="appendix">
       <h2>Acknowledgements</h2>
       <p>
-        Many thanks to Matthew Kaufman who provided a few key suggestions that resulted in an almost total removal of browser-based state.
+        Many thanks to Matthew Kaufman who provided a few key suggestions that resulted in an almost total removal of browser-based state.  Travis Leithead provided guidance on modern web API design that was invaluable.
       </p>
     </section>
   </body>
