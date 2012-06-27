@@ -54,10 +54,10 @@
       // This is optional, uncomment if you have authors as well as editors.
       // only "name" is required. Same format as editors.
 
-      //authors:  [
-      //    { name: "Your Name", url: "http://example.org/",
-      //      company: "Your Company", companyURL: "http://example.com/" },
-      //],
+      authors:  [
+          { name: "Bernard Aboba", url: "mailto:bernard_aboba@hotmail.com",
+            company: "Microsoft", companyURL: "http://microsoft.com/" },
+      ],
 
       // name of the WG
       wg:           "WebRTC Working Group",
@@ -209,20 +209,20 @@ pre.pseudoidl {
     });
       </pre>
       <p>
-        Each candidate consists of an IP address, a port number, a username fragment and password.  This information is exchanged with the remote peer using whatever signaling mechanism is chosen by the application.
+        Each realtime port consists of an IP address, a port number, a username fragment and password.  This information is exchanged with the remote peer using whatever signaling mechanism is chosen by the application.
       </p>
       <p>
-        Other forms of candidate might be necessary for successful traversal of middleboxes like firewalls and NATs.  For instance, a relay candidate uses a relay server to forward packets.  Because the relay server is publically reachable, many of the concerns with middlebox traversal do not apply to it, enabling communication in more challenging network conditions.
+        Other forms of realtime port might be necessary for successful traversal of middleboxes like firewalls and NATs.  For instance, a relay port (i.e., relay candidate) uses a relay server to forward packets.  Because the relay server is publically reachable, many of the concerns with middlebox traversal do not apply to it, enabling communication in more challenging network conditions.
       </p>
       <pre class="example">
-    RealtimePort.allocateRelay(relay, function(error, relayCandidate) {
+    RealtimePort.allocateRelay(relay, function(error, relayCandidates) {
         if (!error) {
-            signalingChannel.send('candidate', [ relayCandidate ]);
+            signalingChannel.send('candidate', relayCandidate);
         }
     });
       </pre>
       <p>
-        Local and remote candidates are paired and connectivity checking is used for each pair to determine which candidates can be used for exchanging packets.
+        Local and remote realtime ports are paired and connectivity checking is used for each pair to determine which ports can be used for exchanging packets.
       </p>
       <pre class="example">
     function receivePeerCandidates(remotePorts) {
@@ -234,7 +234,7 @@ pre.pseudoidl {
     }
       </pre>
       <p>
-        Of the successful connectivity checks, one or more pairs are selected.  The local candidate is then used to create a <code><a>RealtimeTransport</a></code>.
+        Of the successful connectivity checks, one or more pairs are selected.  The local port is then used to create a <code><a>RealtimeTransport</a></code>.
       </p>
       <pre class="example">
     function connectivityCheckSuccess(local, remote) {
@@ -264,21 +264,21 @@ pre.pseudoidl {
         <dl title="dictionary RemoteRealtimePort" class="idl">
           <dt>DOMString ip</dt>
           <dd>
-            The IP address (v4 or v6) for the candidate.
+            The IP address (v4 or v6) for the realtime port.
           </dd>
 
           <dt>unsigned short port</dt>
           <dd>
-            The UDP port number for the candidate.
+            The UDP port number for the realtime port.
           </dd>
 
           <dt>DOMString ufrag</dt>
           <dd>
-            The ICE username fragment for the candidate.
+            The ICE username fragment for the port.
           </dd>
           <dt>DOMString username</dt>
           <dd>
-            The username is used to specify the STUN <code>USERNAME</code> attribute explicitly.  If present, this parameter is used in preference to the username fragment.  See <a>server reflexive candidate</a>s for an explanation of this parameter.
+            The username is used to specify the STUN <code>USERNAME</code> attribute explicitly.  If present, this parameter is used in preference to the username fragment.  See <a>server reflexive address</a>es for an explanation of this parameter.
           </dd>
 
           <dt>DOMString pwd</dt>
@@ -297,28 +297,28 @@ pre.pseudoidl {
         </p>
 
         <p>
-          The application cannot select or alter the values chosen for local candidates.  The browser MAY select any UDP port number, and MUST select values for ufrag and pwd that have sufficient random entropy that they cannot be easily guessed.  This guarantees that only entities that receive candidate information are able to successfully make a connectivity check.  It also allows peers to identify unique browsers.
+          The application cannot select or alter the values chosen for local ports.  The browser MAY select any UDP port number, and MUST select values for ufrag and pwd that have sufficient random entropy that they cannot be easily guessed.  This guarantees that only entities that receive this information are able to successfully make a connectivity check.  It also allows peers to identify unique browsers.
         </p>
 
         <dl title="interface RealtimePort : EventTarget" class="idl">
           <dt>readonly attribute DOMString ip</dt>
           <dd>
-            The IP address (v4 or v6) for the candidate.
+            The IP address (v4 or v6) for the realtime port.
           </dd>
 
           <dt>readonly attribute unsigned short port</dt>
           <dd>
-            The UDP port number for the candidate.
+            The UDP port number for the realtime port.
           </dd>
 
           <dt>readonly attribute DOMString ufrag</dt>
           <dd>
-            The ICE username fragment for the candidate.
+            The ICE username fragment for the port.
           </dd>
 
           <dt>readonly attribute DOMString pwd</dt>
           <dd>
-            The ICE password for the candidate.
+            The ICE password for the port.
           </dd>
 
           <dt>static void openLocalPorts (RealtimePortCallback callback)</dt>
@@ -332,7 +332,7 @@ pre.pseudoidl {
           </dd>
           <dt>void allocateRelay (TurnServer turnServer, RelayCallback callback)</dt>
           <dd>
-            <a href="allocateRelay">Allocate a relay port on a TURN server</a> over UDP using this local candidate as the base.
+            <a href="allocateRelay">Allocate a relay port on a TURN server</a> over UDP using this local realtime port as the base.
           </dd>
           
           <dt>[TreatNonCallableAsNull] attribute Function? onnetworkchange</dt>
@@ -434,7 +434,7 @@ pre.pseudoidl {
         <dl title="interface ConnectivityCheckEvent : Event" class="idl">
           <dt>attribute RemoteRealtimePort remote</dt>
           <dd>
-            This identifies the remote candidate involved in this connectivity check.  For incoming checks, the remote candidate information only includes <code>ip</code> and <code>port</code>.
+            This identifies the remote port involved in this connectivity check.  For incoming checks, the remote port information only includes <code>ip</code> and <code>port</code>.
           </dd>
           
           <dt>attribute StunBinding? request</dt>
@@ -453,32 +453,32 @@ pre.pseudoidl {
       <section>
         <h3><code>RealtimePort</code> Lifecycle</h3>
         <p>
-          A local RealtimePort is created by the browser in response to a call to <code><a href="#widl-RealtimePort-openLocalPorts">openLocalPorts</a>(<var>callback</var>)</code> or <code><a href="#widl-RealtimePort-allocateRelay">allocateRelay</a>(<var>callback</var>)</code>.  Each candidate is given to the application with the open attribute set to true. 
+          A local <a>RealtimePort</a> is created by the browser in response to a call to <code><a href="#widl-RealtimePort-openLocalPorts">openLocalPorts</a>(<var>callback</var>)</code> or <code><a href="#widl-RealtimePort-allocateRelay-static-void-TurnServer-turnServer-RealtimePortCallback-callback">allocateRelay</a>(<var>callback</var>)</code>.  Each RealtimePort is given to the application with the open attribute set to true. 
         </p>
 
         <section id="openLocalPorts">
-          <h4>Gathering Host Candidates</h4>
+          <h4>Opening Local Ports</h4>
           <p>
             Host-local ports (host candidates in ICE) are UDP ports that are opened on the local host.  These ports are opened by the browser in response to a call to <code><a>RealtimePort</a>.<a href="#widl-RealtimePort-openLocalPorts">openLocalPorts</a>(<var>callback</var>)</code>.
           </p>
 
           <p class="note">
-            The username fragment and password used in ICE is normally global.  That is, the same values are shared for all candidates in the same session.  Browsers that wish to interoperate with non-browser peers SHOULD provide the same value for ufrag and pwd as a result of each request to gather local candidates.
+            The username fragment and password used in ICE is normally global.  That is, the same values are shared for all candidates in the same session.  Browsers that wish to interoperate with non-browser peers SHOULD provide the same value for ufrag and pwd as a result of each request to open local ports.
           </p>
         </section>
 
         <section>
-          <h4>Discovering Server Reflexive Candidates</h4>
+          <h4>Discovering Server Reflexive Addresses</h4>
           <p>
-            A <dfn>server reflexive candidate</dfn> is a candidate, as seen by a server.  The server reports the address that it sees when the browser sends it a packet.  Where there are network address translation (NAT) middleboxes between the browser and the server, this reveals the translated address at the NAT, a value that might be undetectable from the browser.
+            A <dfn>server reflexive address</dfn> is the addressing information for a given port, as seen by a server.  The server reports the address that it sees when the browser sends it a packet.  Where there are network address translation (NAT) middleboxes between the browser and the server, this reveals the translated address at the NAT, a value that might be undetectable from the browser.
           </p>
           <p>
-            Server reflexive candidates are gathered by making connectivity checks to STUN servers from a specific host candidate.  The server provides the address that it sees in the <code>XOR-MAPPED-ADDRESS</code> attribute of the response.
+            Server reflexive addresses are gathered by making connectivity checks to STUN servers from a specific local realtime port.  The server provides the address that it sees in the <code>XOR-MAPPED-ADDRESS</code> attribute of the response.
           </p>
-          <p>Using a server reflexive address ultimately results in packets arriving at the corresponding host candidate.  Therefore, server reflexive addresses do not require the creation of additional <code><a>RealtimePort</a></code> objects in the browser.
+          <p>Using a server reflexive address ultimately results in packets arriving at the corresponding host-local port.  Therefore, server reflexive addresses do not require the creation of additional <code><a>RealtimePort</a></code> objects in the browser.
           </p>
           <p>
-            The <a href="#checking">connectivity check</a> interface is used to send queries to STUN servers.  When querying a STUN server, the remote candidate can include several variations on the set of included options:
+            The <a href="#checking">connectivity check</a> interface is used to send queries to STUN servers.  When querying a STUN server, the <code><a>RemoteRealtimePort</a></code> can include several variations on the set of included options:
             <ul>
               <li>
                 An ICE-compatible <a href="#checking">connectivity check</a> is invoked by providing ICE username fragment and password parameters.  The STUN <code>USERNAME</code> attribute is populated by concatenating the remote username fragment (<code><var>remotePort</var>.ufrag</code>), a colon character (':') and the local username fragment.  The <code>MESSAGE-INTEGRITY</code> attribute is created using the remote password (<code><var>remotePort</var>.pwd</code>) as described in [[!RFC5389]].
@@ -495,7 +495,7 @@ pre.pseudoidl {
             </ul>
           </p>
           <p>
-            A candidate pair is only marked as having active consent if the ICE-compatible connectivity check is used.  This ensures that STUN servers cannot be bombarded with media from browsers.
+            A port pair is only marked as having active consent if the ICE-compatible connectivity check is used.  This ensures that STUN servers cannot be bombarded with media from browsers.
           </p>
           <p>
             If long-term credentials are in use for the STUN server, as described in [[!RFC5389]], then the application is responsible for calculating the value of the password.
@@ -503,25 +503,25 @@ pre.pseudoidl {
         </section>
 
         <section id="allocateRelay">
-          <h4>Allocating Relay Candidates</h4>
+          <h4>Allocating Relays</h4>
           <p>
-            Relay candidates are allocated by calling <code><a>RealtimePort</a>.<dfn>allocateRelay</dfn>(<var>turnServerRealtimePort</var>, <var>callback</var>[, <var>attributes</var>])</code>.  The browser performs a TURN [[!RFC5766]] relay allocation with the identified host and provides a relay candidate to the provided callback.
+            UDP relays are allocated by calling <code><a>RealtimePort</a>.<dfn>allocateRelay</dfn>(<var>turnServerRealtimePort</var>, <var>callback</var>[, <var>attributes</var>])</code>.  The browser performs a TURN [[!RFC5766]] relay allocation with the identified host and provides a relayed <code><a>RealtimePort</a></code> to the provided callback.
           </p>
           <p>
-            A <var>turn</var> attribute can be set on the TURN server candidate to select the transport used between the browser and TURN server.  The <var>turn</var> attribute takes one of three values: <code>udp</code>, <code>tcp</code>, or <code>tls</code>.  The browser uses UDP to communicate with the TURN server unless otherwise specified.  The <var>turn</var> attribute only determines the transport used between browser and TURN server; UDP is the only supported transport between the server and remote peers.
+            A <var>turn</var> attribute can be set on the TURN server <code><a>RemoteRealtimePort</a></code> to select the transport used between the browser and TURN server.  The <var>turn</var> attribute takes one of three values: <code>udp</code>, <code>tcp</code>, or <code>tls</code>.  The browser uses UDP to communicate with the TURN server unless otherwise specified.  The <var>turn</var> attribute only determines the transport used between browser and TURN server; UDP is the only supported transport between the server and remote peers.
           </p>
           <p>
-            Once the allocation has completed, the <var>callback</var> method is invoked.  An error parameter is set to an error code if the allocation fails.  A single candidate parameter is provided if the allocation is successful.
+            Once the allocation has completed, the <var>callback</var> method is invoked.  An error parameter is set to an error code if the allocation fails.  An array containing a single <code><a>RealtimePort</a></code> parameter is provided if the allocation is successful.
           </p>
           <pre class="example">
     function createRelayCandidate() {
         var relay = { ip: '192.0.2.75', port: 7754, username: 'user', password: 'password1', turn: 'udp' };
-        RealtimePort.allocateRelay(relay, function(error, relayCandidate) {
+        RealtimePort.allocateRelay(relay, function(error, relayCandidates) {
             if (error) {
                 reportError(error);
             } else {
-                signalingChannel.send('candidate', [ relayCandidate ]);
-                scheduleConnectivityChecks([ relayCandidate ]);
+                signalingChannel.send('candidate', relayCandidate);
+                scheduleConnectivityChecks(relayCandidate);
             }
         });
     }
@@ -541,7 +541,7 @@ pre.pseudoidl {
           </dl>
           
           <pre class="pseudoidl">
-enum <span class="idlInterfaceID"><a id="">TurnRelayTransport</a></span> {
+enum <span class="idlInterfaceID"><a id="widl-TurnRelayTransport">TurnRelayTransport</a></span> {
     "<a href="#widl-TurnRelayTransport-udp">udp</a>", "<a href="#widl-TurnRelayTransport-udp">tcp</a>", "<a href="#widl-TurnRelayTransport-udp">tls</a>"
 };
           </pre>
@@ -565,9 +565,13 @@ enum <span class="idlInterfaceID"><a id="">TurnRelayTransport</a></span> {
         </section>
         
         <section>
-          <h4>Closing <code>RealtimePort</code>s</h4>
+          <h4>Closing Realtime Ports</h4>
           <p>
-            RealtimePorts can be closed by calling <code><a href="#widl-RealtimePort-close">close</a>()</code>.  This sets the <var>open</var> attribute to false and closes any transports that use the candidate.   Any attempt to invoke methods on a closed candidate triggers an exception (though <code>status(<var>remotePort</var>)</code> can harmlessly return <code>false</code>).
+            Realtime ports can be closed by calling <code><a href="#widl-RealtimePort-close">close</a>()</code>.  This sets the <var>open</var> attribute to false and closes any transports that use the port.   Any attempt to invoke methods on a closed <code><a>RealtimePort</a></code> triggers an exception, except for <code>status(<var>remotePort</var>)</code> that can harmlessly return <code>false</code>.
+          </p>
+
+          <p>
+            Closing a realtime port does not prevent packets from arriving, though it stops them from being seen by applications and thus connectivity checks to these ports fail.  A well-behaved remote peer will eventually stop sending when connectivity checks fail.
           </p>
         </section>
       </section>
@@ -581,7 +585,7 @@ enum <span class="idlInterfaceID"><a id="">TurnRelayTransport</a></span> {
         <section id="checking">
           <h4>Sending Connectivity Checks</h4>
           <p>
-            Applications can request the sending of a STUN Binding request to perform a connectivity check, collect candidates, or allocate relays.  The browser performs a connectivity check by sending a STUN Binding request using <code><var>candidate</var>.<a>check</a>(<var>remotePort</var>, <var>callback</var>[, <var>attributes</var>])</code>.
+            Applications can request the sending of a STUN Binding request to perform a connectivity check or collect additional addressing information.  The browser performs a connectivity check by sending a STUN Binding request using <code><var>candidate</var>.<a>check</a>(<var>remotePort</var>, <var>callback</var>[, <var>attributes</var>])</code>.
           </p>
           <p>
             The browser invokes the callback function if the connectivity check successfully completes.  The STUN request and response messages are passed to the callback.
@@ -604,26 +608,25 @@ enum <span class="idlInterfaceID"><a id="">TurnRelayTransport</a></span> {
           <p>
             The browser MUST limit the time that an outstanding connectivity check remains valid.  However, the browser is not responsible for providing a callback when this timer expires.  The application is responsible for looking after its own timers.
           </p>
-
         </section>
 
         <section id="tracking">
-          <h4>Tracking Valid <code>RealtimePort</code> Pairs</h4>
+          <h4>Tracking Valid Realtime Port Pairs</h4>
           <p>
-            The browser is responsible for tracking valid remote candidate pairs.  Any time that a locally originated connectivity check succeeds, the browser marks the candidate pair (local candidate + remote candidate) as valid.  The valid marking lasts for a fixed duration.  The browser SHOULD keep a candidate pair valid for 40 seconds.
+            The browser is responsible for tracking valid remote realtime port pairs.  Any time that a locally originated connectivity check succeeds, the browser marks the pair of ports (local port + remote port) as valid.  The valid marking lasts for a fixed duration.  The browser SHOULD keep a port pair valid for 40 seconds.
           </p>
           <p>
-            The browser MUST NOT send anything other than a connectivity check unless the candidate pair is valid.  This ensures that the remote peer has consented to receive packets and that the consent is recent.
+            The browser MUST NOT send anything other than a connectivity check unless the port pair is valid.  This ensures that the remote peer has consented to receive packets and that the consent is recent.
           </p>
           <p>
-            The status of a candidate pair can be queried by using <code><var>candidate</var>.<a>status</a>(<var>remotePort</var>)</code>.  This method returns <code>true</code> if a connectivity check between the two candidates succeeded recently.
+            The status of a port pair can be queried by using <code><var>candidate</var>.<a>status</a>(<var>remotePort</var>)</code>.  This method returns <code>true</code> if a connectivity check between the two ports succeeded recently.
           </p>
         </section>
 
         <section id="serving">
           <h4>Responding to Connectivity Checks</h4>
           <p>
-            The browser responds to valid connectivity checks on all open candidates.  Received packets that do not conform with the following rules MUST be ignored:
+            The browser responds to valid connectivity checks on all open ports.  Received packets that do not conform with the following rules MUST be ignored:
             <ul>
               <li>
                 The packet is a STUN Binding request that contains the STUN magic cookie [[!RFC5389]].
@@ -640,11 +643,70 @@ enum <span class="idlInterfaceID"><a id="">TurnRelayTransport</a></span> {
             </ul>
           </p>
           <p>
-            Applications can register a callback listener against a candidate.  This function is called when a valid connectivity check is received.  The callback signature is identical to the callback for locally originated conectivity checks.  Both the request and response message are passed to the callback.
+            Applications can register a callback listener against a realtime port.  This function is called when a valid connectivity check is received.  The callback signature is identical to the callback for locally originated conectivity checks.  Both the request and response message are passed to the callback.
           </p>
           <p>
-            Browsers respond to connectivity checks on each candidate that it creates.  The browser MUST limit the number of unique peers that it generates connectivity check responses for.  This ensures that the number of flows that can be created towards the browser from different browsers is limited.  This mitigates an attack where a web attacker shares candidate information with multiple browsers.
+            Browsers respond to connectivity checks on each port that it opens.  The browser MUST limit the number of unique peers that it generates connectivity check responses for.  This ensures that the number of flows that can be created towards the browser from different browsers is limited.  This mitigates an attack where a web attacker shares open port information with multiple browsers.
           </p>
+        </section>
+
+        <section>
+          <h4>The <code>StunBinding</code> Object</h4>
+          <p>
+            The <code><dfn>StunBinding</dfn></code> object contains information necessary to construct and interpret STUN Binding requests.
+          </p>
+          <dl title="interface StunBinding" class="idl">
+            <dt>readonly attribute ArrayBuffer transactionId</dt>
+            <dd>
+              The STUN transaction ID is selected by the browser.  This object is only provided to users once a STUN transaction has successfully completed, ensuring that STUN responses cannot be spoofed by web attackers.
+            </dd>
+            <dt>readonly attribute StunAttribute[] attributes</dt>
+            <dd>
+              The complete set of STUN attributes in the request in the order that they appear.  Note that attributes that appear after the <code>MESSAGE-INTEGRITY</code> are not authenticated.
+            </dd>
+            <dt>StunAttribute getStunAttribute(byte type)</dt>
+            <dd>
+              Retrieves the first appearing <code><a>StunAttribute</a></code> of the given type.  This method only returns authenticated attributes.
+            </dd>
+            <dt>Address getMappedAddress()</dt>
+            <dd>
+              A convenience method for accessing the <code>XOR-MAPPED-ADDRESS</code> attribute.  This returns a dictionary containing <code>ip</code> and <code>port</code>.
+            </dd>
+          </dl>
+        </section>
+
+        <section>
+          <h4>The <code>StunAttribute</code> Object</h4>
+          <p>
+            The <code><dfn>StunAttribute</dfn></code> dictionary contains a single STUN attribute.
+          </p>
+          <dl title="dictionary StunAttribute" class="idl">
+            <dt>byte value</dt>
+            <dd>
+              The type of the STUN attribute, see <a href="http://www.iana.org/assignments/stun-parameters/stun-parameters.xml#stun-parameters-3">the IANA STUN Attributes registry</a> for a listing of standard values.
+            </dd>
+            <dt>ArrayBuffer value</dt>
+            <dd>
+              The binary value of the STUN attribute, from 0 to 255 bytes in length.
+            </dd>
+          </dl>
+        </section>
+
+        <section>
+          <h4>The <code>Address</code> Object</h4>
+          <p>
+            When referring to addressing information, the following dictionary is used.
+          </p>
+          <dl title="dictionary Address" class="idl">
+            <dt>DOMString ip</dt>
+            <dd>
+              The IP address, in string form.
+            </dd>
+            <dt>unsigned short port</dt>
+            <dd>
+              The port number.
+            </dd>
+          </dl>
         </section>
       </section>
 
@@ -657,7 +719,7 @@ enum <span class="idlInterfaceID"><a id="">TurnRelayTransport</a></span> {
           The <code><dfn>networkchange</dfn></code> event is registered against a local <code><a>RealtimePort</a></code>.
         </p>
         <p class="note">
-          Ideally, this would be globally registered, but since <code><a>RealtimePort</a></code> doesn't have a constructor, this might not be necessary.
+          Ideally, this would be globally registered, but since <code><a>RealtimePort</a></code> doesn't have a constructor, this might not be necessary.  Again, ideally this is something for the <a href="http://www.w3.org/TR/netinfo-api/">network information API</a> to solve.
         </p>
         <p>
           The browser fires a <code><a>networkchange</a></code> event when it detects a potential change in the status of the network.  Events that trigger this callback include changes to open network interfaces and the addition or removal of network interfaces.
@@ -673,7 +735,7 @@ enum <span class="idlInterfaceID"><a id="">TurnRelayTransport</a></span> {
           In some applications, establishing a peer-to-peer transport occurs prior to establishing user consent for the session.  This can be necessary to remove the delays associated with transport setup that might otherwise occur after session acceptance.  Exposing IP address information prior to acceptance provides the initiator of the session a way to collect the IP address of even an unwilling peer.
         </p>
         <p>
-          Applications are encouraged to only signal relay candidates prior to gaining explicit consent from users.
+          Applications are encouraged to only signal relay ports prior to gaining explicit consent from users.
         </p>
       </section>
     </section>
@@ -682,9 +744,10 @@ enum <span class="idlInterfaceID"><a id="">TurnRelayTransport</a></span> {
       <h2>Realtime Transport</h2>
       
       <p>
-        A <dfn>RealtimeTransport</dfn> represents the flow of packets between a local and remote candidate.
+        A <dfn>RealtimeTransport</dfn> represents the flow of packets between a local and a remote realtime port.
       </p>
       <p>
+        Upon creation, a <code><a>RealtimeTransport</a></code> beings automatically generating connectivity checks toward the selected remote peer.  If a consent check fails, the transport remains open, but no packets can be sent.
       </p>
       <section>
         <h3>The <code>RealtimeTransport</code> Object</h3>
@@ -694,9 +757,55 @@ enum <span class="idlInterfaceID"><a id="">TurnRelayTransport</a></span> {
             Factory method for creating a transport.
           </dd>
           
+          <dt>readonly attribute RealtimePort localPort</dt>
+          <dd>
+            The local realtime port that is used for this transport.
+          </dd>
+          <dt>readonly attribute SimpleRealtimePort remotePort</dt>
+          <dd>
+            The remote realtime port that is used for this transport.
+          </dd>
+          <dt>readonly attribute boolean dtls</dt>
+          <dd>
+            Whether key negotiation for the transport is being controlled using DTLS.
+          </dd>
+          <dt>readonly attribute RemoteCertificateInformation? remoteCertificate</dt>
+          <dd>
+            Information about the certificate offered by the remote peer.  This attribute is only set if the transport is using DTLS for key negotiation.
+          </dd>
+
+          <dt>readonly attribute SrtpSecurityDescription? outboundSdes</dt>
+          <dd>
+            The SRTP security description for outbound media.
+          </dd>
+          <dt>readonly attribute SrtpSecurityDescription? inboundSdes</dt>
+          <dd>
+            The SRTP security description for inbound media.
+          </dd>
+
           <dt>readonly attribute boolean open</dt>
           <dd>
-            Whether the transport is currently open and able to exchange data.  Newly created transports are 
+            Whether the transport is currently open and able to receive data.  Newly created transports always start with this value set to <code>true</code>.  Note that absence or expiry of consent from the remote peer can cause a transport to be unable to send on an open transport.
+          </dd>
+          <dt> void close()</dt>
+          <dd>
+            This closes the transport.
+          </dd>
+          <dt>attribute Function? onclose</dt>
+          <dd>
+            This event callback is fired when the transport is closed.
+          </dd>
+          <dt>readonly attribute boolean consent</dt>
+          <dd>
+            Whether the transport is currently open and able to send data.  This depends on there being a successful consent check toward the remote peer within a browser-configured period.  This valid is <code>false</code> when consent toward the remote peer has expired.
+          </dd>
+          <dt>attribute Function? onconsent</dt>
+          <dd>
+            This event callback is fired when consent checks toward the remote peer succeed after having failed.
+          </dd>
+          <dt>attribute Function? onconsentexpired</dt>
+          <dd>
+            This event callback is fired when consent checks toward the remote peer time out and no packets are able to be sent on this transport.
           </dd>
         </dl>
       </section>
@@ -704,21 +813,212 @@ enum <span class="idlInterfaceID"><a id="">TurnRelayTransport</a></span> {
       <section>
         <h3>Transport Creation Options</h3>
         <p>
-          Specifying <code><dfn>TransportOptions</dfn></code> can be used to alter the characteristics of a transport.
+          Specifying <code><dfn>RealtimeTransportOptions</dfn></code> can be used to alter the characteristics of a transport.
         </p>
-        <dl title="dictionary TransportOptions">
+        <dl title="dictionary RealtimeTransportOptions">
           <dt>RealtimeTransportMode mode = "dtls-srtp"</dt>
           <dd>
             The mode used for the transport.
           </dd>
+          <dt>SrtpSecurityDescription? outboundSdes</dt>
+          <dd>
+            A description of the security parameters for outbound streams of RTP media secured with SRTP [[!RFC3711]].  Used only when SRTP keys are negotiated through signaling.
+          </dd>
+          <dt>SrtpSecurityDescription? inboundSdes</dt>
+          <dd>
+            A description of the security parameters for inbound streams of RTP media secured with SRTP [[!RFC3711]].  Used only when SRTP keys are negotiated through signaling.
+          </dd>
+          <dt>DtlsRole? role</dt>
+          <dd>
+            The role that the local browser takes in the DTLS [[!RFC5764]] handshake, either 'client' or 'server'.
+          </dd>
+          <dt>CertificateValidationCallback? validate</dt>
+          <dd>
+            This callback is triggered when the certificate for the remote peer is received.  This allows the application to accept or reject a peer based on the proffered certificate.  This is only valid for a DTLS transport.  When omitted, the certificates is automatically accepted.
+          </dd>
         </dl>
+        <section>
+          <h4>Realtime Transport Modes</h4>
+          <p>
+            </p>
+          <pre class="pseudoidl">
+enum <span class="idlInterfaceID"><a id="widl-RealtimeTransportMode">RealtimeTransportMode</a></span> {
+    "<a href="#widl-RealtimeTransportMode-srtp">srtp</a>", "<a href="#widl-RealtimeTransportMode-dtls-srtp">dtls-srtp</a>"
+};
+          </pre>
+          <!-- <dl title="enum DtlsRole" class="enum" data-transform="transformEnum">-->
+          <dl class="attributes">
+            <dt id="widl-RealtimeTransportMode-srtp"><code>srtp</code></dt>
+            <dd>
+              Instructs the browser to create a <code><a>RealtimeTransport</a></code> using SRTP.  When this option is chosen, the <code><a>RealtimeTransportOptions</a></code> MUST also include <code><a href="#widl-RealtimeTransportOptions-outboundSdes">outboundSdes</a></code> and <code><a href="#widl-RealtimeTransportOptions-inboundSdes">inboundSdes</a></code>.
+            </dd>
+            <dt id="widl-RealtimeTransportMode-dtls-srtp"><code>dtls-srtp</code></dt>
+            <dd>
+              Instructs the browser to create a <code><a>RealtimeTransport</a></code> using DTLS-SRTP [[!RFC5764]].  When this option is chosen, the <code><a>RealtimeTransportOptions</a></code> MUST also include <code><a href="#widl-RealtimeTransportOptions-role">role</a></code> and it SHOULD include <code><a href="#widl-RealtimeTransportOptions-validate">validate</a></code>.
+            </dd>
+          </dl>
+        </section>
+        <section>
+          <h4>DTLS Roles</h4>
+          <p>
+            DTLS Roles are applicable when creating a transport over DTLS.  This option determines whether the local browser is in the client or server role.
+          </p>
+          <pre class="pseudoidl">
+enum <span class="idlInterfaceID"><a id="widl-DtlsRole">DtlsRole</a></span> {
+    "<a href="#widl-DtlsRole-client">client</a>", "<a href="#widl-DtlsRole-server">server</a>"
+};
+          </pre>
+          <!-- <dl title="enum DtlsRole" class="enum" data-transform="transformEnum">-->
+          <dl class="attributes">
+            <dt id="widl-DtlsRole-client"><code>client</code></dt>
+            <dd>
+              Instructs the browser to act as a DTLS server when creating a <code><a>RealtimeTransport</a></code>.  The browser acts as a DTLS client and initiates the DTLS handshake.
+            </dd>
+
+            <dt id="widl-DtlsRole-server"><code>server</code></dt>
+            <dd>
+              Instructs the browser to act as a DTLS server when creating a <code><a>RealtimeTransport</a></code>.  The browser waits for the remote peer to initiate the DTLS handshake.
+            </dd>
+          </dl>
+        </section>
+        <section>
+          <h4>Certificate Validation Callback</h4>
+          <p>
+            This callback method is invoked when a DTLS transport is being created.  It allows the application to block the creation of a new transport based on the identity of the peer.
+          </p>
+          <pre class="pseudoidl">
+<span id="idl-def-CertificateValidationCallback" class="idlCallback">callback <span class="idlDictionaryID">CertificateValidationCallback</span> = boolean (<span class="idlParamType">RemoteCertificateInformation</span> <span class="idlParamName">remoteCertificate</span>);</span>
+          </pre>
+          <p>
+            The callback is passed information about the certificate offered by the remote peer.  The application can make a decision based on this and either return <code>true</code> to indicate that the transport creation should proceed, or <code>false</code> to indicate that the transport creation should be aborted.
+          </p>
+        </section>
+        <section>
+          <h4>Certificate Information</h4>
+          <p>
+            Information about an X.509 certificate, as used with DTLS.
+          </p>
+          <p>
+            This is another candidate for moving to another working group.
+          </p>
+          <p class="note">
+            Users are expected to make their own determination about trustworthiness based on the feedback information presented in browser chrome.  Certificate information allows application developers a better way of building more trustworthy applications.
+          </p>
+          <dl title="[NoInterfaceObject] interface CertificateInformation" class="idl">
+            <dt>static CertificateInformation getLocalCertificate()</dt>
+            <dd>
+              This method retrieves the certificate that the browser will use for creating realtime transport.  The application can use this information to signal to peers.
+            </dd>
+            
+            <dt>readonly attribute ArrayBuffer certificate</dt>
+            <dd>
+              The DER-encoded certificate information.
+            </dd>
+            <dt>readonly attribute DOMString subject</dt>
+            <dd>
+              The subject of the certificate, using the string encoding from RFC 4514.
+            </dd>
+            <dt>readonly attribute CertificateFingerprints fingerprint</dt>
+            <dd>
+              A dictionary containing fingerprints for the certificate.  Keys are the <a href="http://www.iana.org/assignments/hash-function-text-names/hash-function-text-names.xml">textual name for the hash function</a>; the corresponding value for each is an <code>ArrayBuffer</code> containing the value of the fingerprint.  Browsers MUST implement SHA-1 (<code>sha-1</code>) and SHA-2 256 (<code>sha-256</code>).
+            </dd>
+          </dl>
+        </section>
+        <section>
+          <h4>Remote Certificate Information</h4>
+          <p>
+            Information about a remotely proffered X.509 certificate, which includes all the basic certificate information, plus fields that reveal what knowledge the browser has about trust (for instance, is this a valid domain certificate).
+          </p>
+          <p>For example, an application might register the following <code>CertificateValidationCallback</code> to check that it is talking to the expected domain:
+          </p>
+          <pre class="example">
+function validateCertificate(certInfo) {
+    return certInfo.isValidForDomain('example.com');
+}
+          </pre>
+
+          <dl title="[NoInterfaceObject] interface RemoteCertificateInformation : CertificateInformation" class="idl">
+            <dt>boolean isValidForDomain(DOMString domainName)</dt>
+            <dd>
+              This method returns true iff the certificate chains to one of the trust anchors configured in the browser for the specified domain name.  This allows an application to validate that a peer is offering a valid certificate for its domain.
+            </dd>
+          </dl>
+        </section>
+        <section>
+          <h4>SRTP Security Descriptions</h4>
+          <p>
+            This dictionary describes the parameters necessary to interoperably configure an SRTP stream.  Default values are the defaults defined in [[!RFC3711]].
+          </p>
+          <dl title="dictionary SrtpSecurityDescription" class="idl">
+            <dt>DOMString encrypt = "AES-CM"</dt>
+            <dd>
+              The SRTP cipher to use for encrypting packets.
+            </dd>
+            <dt>boolean encryptRtp = true</dt>
+            <dd>
+              Whether to encrypt RTP packets on this flow.
+            </dd>
+            <dt>boolean encryptRtcp = true</dt>
+            <dd>
+              Whether to encrypt RTCP packets on this flow.
+            </dd>
+            <dt>unsigned short keystreamPrefix = 0</dt>
+            <dd>
+              The number of bits to reserve from the keystream for use in authenticating each encoded packet.
+            </dd>
+            <dt>DOMString authenticate = "HMAC-SHA1"</dt>
+            <dd>
+              The packet authentication algorithm used.
+            </dd>
+            <dt>unsigned short n_a = 160</dt>
+            <dd>
+              The number of bits in the authentication output.
+            </dd>
+            <dt>unsigned short n_tag = 80</dt>
+            <dd>
+              The number of bits from the authentication output to append to the packet.
+            </dd>
+            <dt>DOMString keyDerivation = "AES-CM"</dt>
+            <dd>
+              The algorithm to use for key derivation.
+              </dd>
+            <dt>unsigned long keyDerivationInterval = 0</dt>
+            <dd>
+              The packet index at which new keys are derived.  A value of 0 indicates that new keys are never derived.
+            </dd>
+            <dt>ArrayBuffer key</dt>
+            <dd>
+              The master key.  The size of this ArrayBuffer determines <code>n_a</code>.
+            </dd>
+            <dt>ArrayBuffer salt</dt>
+            <dd>
+              The master salt.  The size of this ArrayBuffer determines <code>n_s</code>.
+            </dd>
+            <dt>unsigned long? windowSizeHint</dt>
+            <dd>
+              A hint to a receiver that indicates how large the replay protection window should be.  Receivers MAY ignore this value.  Values MUST be at least 64 if the value is used.
+            </dd>
+            <dt>unsigned long rtpPacketCount = 281474976710656</dt>
+            <dd>
+              The number of packets that can be safely encrypted using this scheme for RTP.  Default value of 2<sup>48</sup>.
+            </dd>
+            <dt>unsigned long rtcpPacketCount = 2147483648</dt>
+            <dd>
+              The number of packets that can be safely encrypted using this scheme for RTCP.  Default value of 2<sup>31</sup>.
+            </dd>
+            <dt>ArrayBuffer? mki</dt>
+            <dd>
+              The optional master key index.  The size of the ArrayBuffer determines the size.
+            </dd>
+          </dl>
+        </section>
       </section>
     </section>
     
     <section class="appendix">
       <h2>Acknowledgements</h2>
       <p>
-        Many thanks to Matthew Kaufman who provided a few key suggestions that resulted in an almost total removal of browser-based state.  Travis Leithead provided guidance on modern web API design that was invaluable.
+        Thanks to Matthew Kaufman who provided a few key suggestions that resulted in an almost total removal of browser-based state.  Travis Leithead provided guidance on modern web API design that was invaluable.
       </p>
     </section>
   </body>
