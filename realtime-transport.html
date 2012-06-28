@@ -335,7 +335,7 @@ pre.pseudoidl {
             <a href="allocateRelay">Allocate a relay port on a TURN server</a> over UDP using this local realtime port as the base.
           </dd>
           
-          <dt>[TreatNonCallableAsNull] attribute Function? onnetworkchange</dt>
+          <dt>[TreatNonCallableAsNull] attribute EventHandler? onnetworkchange</dt>
           <dd>
             An event handler for being informed of <a href="#networkchange">changes to network connectivity</a>.  <b>Note</b>: This is a candidate for moving to <code>navigator</code> or even the <a href="http://www.w3.org/TR/netinfo-api/">network information API</a>.
           </dd>
@@ -355,7 +355,7 @@ pre.pseudoidl {
             Called when a remote peer <a href="#serving">successfully performs a connectivity check</a> against this port.
           </dd>
 
-          <dt>[TreatNonCallableAsNull] attribute Function? onclose</dt>
+          <dt>[TreatNonCallableAsNull] attribute EventHandler? onclose</dt>
           <dd>
             Invoked when the realtime port is closed.
           </dd>
@@ -387,7 +387,7 @@ pre.pseudoidl {
         </dl>
 
         <section>
-          <h4>The <code>RealtimePortCallback</code> Callback Function</h4>
+          <h4>The <code>RealtimePortCallback</code> Callback</h4>
           <p>
             The <code><dfn>RealtimePortCallback</dfn></code> callback function is passed to <code><a>openLocalPorts</a></code> or <code><a>allocateRelay</a></code>.   When the port is either successfully opened, or opening fails, the callback is invoked.  Opening local ports cannot fail.  Allocating a TURN relay port creates a single port.
           </p>
@@ -791,7 +791,7 @@ enum <span class="idlInterfaceID"><a id="widl-TurnRelayTransport">TurnRelayTrans
           <dd>
             This closes the transport.
           </dd>
-          <dt>attribute Function? onclose</dt>
+          <dt>attribute EventHandler? onclose</dt>
           <dd>
             This event callback is fired when the transport is closed.
           </dd>
@@ -799,11 +799,11 @@ enum <span class="idlInterfaceID"><a id="widl-TurnRelayTransport">TurnRelayTrans
           <dd>
             Whether the transport is currently open and able to send data.  This depends on there being a successful consent check toward the remote peer within a browser-configured period.  This valid is <code>false</code> when consent toward the remote peer has expired.
           </dd>
-          <dt>attribute Function? onconsent</dt>
+          <dt>attribute EventHandler? onconsent</dt>
           <dd>
             This event callback is fired when consent checks toward the remote peer succeed after having failed.
           </dd>
-          <dt>attribute Function? onconsentexpired</dt>
+          <dt>attribute EventHandler? onconsentexpired</dt>
           <dd>
             This event callback is fired when consent checks toward the remote peer time out and no packets are able to be sent on this transport.
           </dd>
