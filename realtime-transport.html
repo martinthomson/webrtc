@@ -26,7 +26,7 @@
 
       // if the specification's copyright date is a range of years, specify
       // the start date here:
-      // copyrightStart: "2012"
+      copyrightStart: "2012"
 
       // if there is a previously published draft, uncomment this and set its YYYY-MM-DD date
       // and its maturity status
@@ -34,7 +34,7 @@
       // previousMaturity:  "WD",
 
       // if there a publicly available Editor's Draft, this is the link
-      edDraftURI:           "https://github.com/martinthomson/webrtc/realtime-transport.html",
+      edDraftURI:           "https://github.com/martinthomson/webrtc/blob/master/realtime-transport.html",
 
       // if this is a LCWD, uncomment and set the end of its review period
       // lcEnd: "2009-08-05",
@@ -752,7 +752,7 @@ enum <span class="idlInterfaceID"><a id="widl-TurnRelayTransport">TurnRelayTrans
       <section>
         <h3>The <code>RealtimeTransport</code> Object</h3>
         <dl title="interface RealtimeTransport : EventTarget" class="idl">
-          <dt>RealtimeTransport createTransport (RealtimePort local, RemoteRealtimePort remote, TransportOptions options, TransportCallback callback)</dt>
+          <dt>void createTransport (RealtimePort local, RemoteRealtimePort remote, TransportOptions options, TransportCallback callback)</dt>
           <dd>
             Factory method for creating a transport.
           </dd>
@@ -996,7 +996,7 @@ function validateCertificate(certInfo) {
             </dd>
             <dt>unsigned long? windowSizeHint</dt>
             <dd>
-              A hint to a receiver that indicates how large the replay protection window should be.  Receivers MAY ignore this value.  Values MUST be at least 64 if the value is used.
+              A hint to a receiver that indicates how large a replay protection window it is requested to maintain.  This value MAY be ignored.
             </dd>
             <dt>unsigned long rtpPacketCount = 281474976710656</dt>
             <dd>
