@@ -131,7 +131,7 @@
 navigator.getUserMedia({ audio: true }, function(media) {
     var track = media.audioTracks[0];
     var description = new RealtimeMediaDescription(track);
-    var localRtStream = description.createStream(track, realtimeTransport);
+    var localRtStream = new LocalRealtimeMediaStream(track, description, realtimeTransport);
     signalingChannel.send(JSON.stringify(description));
 });
       </pre>
@@ -154,7 +154,10 @@ function receiveDescriptionFromSignaling(remoteDescription) {
         A <code>RealtimeMediaStream</code> represents a uni-directional flow of media to or from the browser.
       </p>
       <p>
-        Instances of <code>RealtimeMediaStream</code> are created by <code><a>RealtimeMediaDescription</a></code>.
+        Instances of <code>RealtimeMediaStream</code> are created through type-specific constructors, either <code><a>LocalRealtimeMediaStream</a></code> or <code><a>RemoteRealtimeMediaStream</a></code>.  Each MUST be created for a single type of stream; audio and video cannot be mixed in a single stream.
+      </p>
+      <p>
+        Synchronization of streams is achieved by having audio and video tracks added to the same <code>MediaStream</code> so that packet timestamps and playback can be properly matched between the streams.
       </p>
       <dl title="[NoInterfaceObject] interface RealtimeMediaStream : EventTarget" class="idl">
         <dt>readonly attribute MediaStreamTrack track</dt>
@@ -191,7 +194,10 @@ function receiveDescriptionFromSignaling(remoteDescription) {
         <p>
           The <code>LocalRealtimeMediaStream</code> represents a locally-sourced stream of realtime media.
         </p>
-        <dl title="[NoInterfaceObject] interface LocalRealtimeMediaStream : RealtimeMediaStream" class="idl">
+        <p>
+          The constructor for <code>LocalRealtimeMediaStream</code> ignores any information in the <code>RealtimeMediaDescription</code> that it is passed that is not applicable to the provided track.
+        </p>
+        <dl title="[Constructor(MediaStreamTrack track, RealtimeMediaDescription description, RealtimeTransport transport, optional RealtimeTransport rtcpTransport)] interface LocalRealtimeMediaStream : RealtimeMediaStream" class="idl">
           <dt>void play()</dt>
           <dd>
             Causes the encoding of the stream and the corresponding creation of packets to be resumed.
@@ -216,7 +222,10 @@ function receiveDescriptionFromSignaling(remoteDescription) {
         <p>
           A <code>RemoteRealtimeMediaStream</code> represents a stream of realtime media that originates on the network.
         </p>
-        <dl title="[NoInterfaceObject] interface RemoteRealtimeMediaStream : RealtimeMediaStream" class="idl">
+        <p>
+          The constructor to <code>RemoteRealtimeMediaStream</code> constructs a <code>MediaStreamTrack/code> based on the provided <code>RealtimeMediaDescription</code>.  If the browser is unable to construct this object, then an error is thrown.  This error might be thrown if the media description includes information for both audio and video tracks.
+        </p>
+        <dl title="[Constructor(RealtimeMediaDescription description, RealtimeTransport transport, optional RealtimeTransport rtcpTransport)] interface RemoteRealtimeMediaStream : RealtimeMediaStream" class="idl">
           <dt>attribute UnknownPacketTypeEventHandler? onunknownpackettype</dt>
           <dd>
             Called when an <a href="#unknownpackettype">unknown packet type</a> arrives on the stream.
@@ -246,7 +255,7 @@ function receiveDescriptionFromSignaling(remoteDescription) {
       <p>
         Specific sub-classes are used for describing outbound and inbound streams, though the basic parameters are common.
       </p>
-      <dl title="[NoInterfaceObject] interface RealtimeMediaDescription" class="idl">
+      <dl title="[Constructor (MediaStreamTrack track, optional RealtimeMediaDescriptionDictionary description, optional RealtimeMediaDescriptionConstraints constraints), Constructor (RealtimeMediaDescriptionDictionary description, optional RealtimeMediaDescriptionConstraints constraints), Constructor (RealtimeMediaDescriptionConstraints constraints)] interface RealtimeMediaDescription" class="idl">
         <dt>readonly attribute RtpStreamDescription[] streams</dt>
         <dd>
           A description of the RTP streams that comprise the realtime stream.  Most codecs only support a single RTP stream.  Only layered codecs such as H.264 SVC [[!RFC6190]] are encoded into multiple streams.
@@ -255,11 +264,11 @@ function receiveDescriptionFromSignaling(remoteDescription) {
         <dd>
           The RTCP Canonical Name (CNAME) used to identify this browser as a source of media in RTCP.  As described in [[I-D.rtcweb-rtp-usage]], the browser generates a short-term CNAME that cannot be linked to its identity over time.
         </dd>
-        <dt>RtcpFeature[] rtcpFeatures</dt>
+        <dt>readonly attribute RtcpFeature[] rtcpFeatures</dt>
         <dd>
           The set of RTCP features that are used by the described stream(s).
         </dd>
-        <dt>CodecDescription[] codecs</dt>
+        <dt>readonly attribute CodecDescription[] codecs</dt>
         <dd>
           A description of the set of codecs that are used by the described stream(s).
         </dd>
@@ -297,24 +306,90 @@ function receiveDescriptionFromSignaling(remoteDescription) {
         </dl>
       </section>
       <section>
-        <h3>The <code>LocalRealtimeMediaDescription</code> Object</h3>
+        <h3>The <code>RtpStreamDescription</code> Object</h3>
         <p>
-          A <code><a>LocalRealtimeMediaDescription</a></code> is used to describe the packetization of locally originated streams of media.  Outbound streams are automatically constrained by what features the browser supports for transmission of media.
+          A <code>RtpStreamDescription</code> describes a single codec and how it is applied to both encoding or decoding.  This includes the packet type for the codec and any codec-specific parameters.
         </p>
-        <!-- want to support all variations on the constructor, which means three different constructors -->
-        <dl title="[Constructor (optional MediaStreamTrack track, optional RealtimeMediaDescriptionDictionary description, optional RealtimeMediaDescriptionConstraints constraints)] interface LocalRealtimeMediaDescription : RealtimeMediaDescription" class="idl">
-          <dt>LocalRealtimeMediaStream createStream (MediaStreamTrack track, RealtimeTransport transport, optional RealtimeTransport rtcpTransport)</dt>
+        <dl title="dictionary RtpStreamDescription" class="idl">
+          <dt>unsigned int ssrc</dt>
           <dd>
+            Each RTP stream has a discrete, 32-bit synchronization source (SSRC).  This value is used to identify a single stream in an RTP session.  The browser allocates a new, random SSRC from the set of available SSRC values for each stream, though this value MAY be overridden by the application.
+          </dd>
+          <dt>unsigned long bandwidth?</dt>
+          <dd>
+            The bandwidth, in bits per second, allowed for this stream.
           </dd>
         </dl>
       </section>
       <section>
-        <h3>The <code>RemoteRealtimeMediaDescription</code> Object</h3>
+        <h3>The <code>RtcpFeature</code> Object</h3>
         <p>
-</p>
-        <dl title="[Constructor (optional RealtimeMediaDescriptionDictionary description, optional RealtimeMediaDescriptionConstraints constraints)] interface RemoteRealtimeMediaDescription : RealtimeMediaDescription" class="idl">
-          <dt>RemoteRealtimeMediaStream createStream (RealtimeTransport transport, optional RealtimeTransport rtcpTransport)</dt>
+          The realtime feedback channel provided by RTCP [[!RFC3550]] supports a number of optional features.  This enumeration identifies a specific features.  An array of these values are used to describe each realtime stream.
+        </p>
+          <pre class="pseudoidl">
+enum <span class="idlInterfaceID"><a id="widl-RtcpFeature">RtcpFeature</a></span> {
+    "<a href="#widl-RtcpFeature-avpf">avpf</a>", "<a href="#widl-RtcpFeature-nack">nack</a>", "<a href="#widl-RtcpFeature-pli">pli</a>", "<a href="#widl-RtcpFeature-sli">sli</a>", "<a href="#widl-RtcpFeature-rpsi">rpsi</a>", "<a href="#widl-RtcpFeature-reduced">reduced</a>", "<a href="#widl-RtcpFeature-retx">retx</a>", "<a href="#widl-RtcpFeature-fir">fir</a>", "<a href="#widl-RtcpFeature-tmmbr">tmmbr</a>"
+};
+          </pre>
+          <!-- <dl title="[NoInterfaceObject] enum TurnRelayTransport" class="enum" data-transform="transformEnum">-->
+          <dl class="attributes">
+            <dt id="widl-RtcpFeature-avpf"><code>avpf</code></dt>
+            <dd>
+              The extended profile for RTCP-based feedback, AVPF [[!RFC4585]].
+            </dd>
+            <dt id="widl-RtcpFeature-nack"><code>nack</code></dt>
+            <dd>
+              The RTCP generic NACK [[!RFC4585]] feedback feature.
+            </dd>
+            <dt id="widl-RtcpFeature-pli"><code>pli</code></dt>
+            <dd>
+              RTCP picture loss indication (PLI) message [[!RFC4585]].
+            </dd>
+            <dt id="widl-RtcpFeature-sli"><code>sli</code></dt>
+            <dd>
+              RTCP slice loss indication (SLI) message [[!RFC4585]].
+            </dd>
+            <dt id="widl-RtcpFeature-rpsi"><code>rpsi</code></dt>
+            <dd>
+              RTCP reference picture selection indication (RPSI) message [[!RFC4585]].
+            </dd>
+
+            <dt id="widl-RtcpFeature-reduced"><code>reduced</code></dt>
+            <dd>
+              Reduced sized RTCP [[!RFC5506]].
+            </dd>
+            <dt id="widl-RtcpFeature-retx"><code>retx</code></dt>
+            <dd>
+              RTP retransmission [[!RFC4588]].
+            </dd>
+
+            <dt id="widl-RtcpFeature-fir"><code>fir</code></dt>
+            <dd>
+              RTCP full intra-frame request (FIR) message [[!RFC5104]].
+            </dd>
+            <dt id="widl-RtcpFeature-tmmbr"><code>tmmbr</code></dt>
+            <dd>
+              Temporary maximum media stream bit rate request (TMMBR) [[!RFC5104]].
+            </dd>
+          </dl>
+      </section>
+      <section>
+        <h3>The <code>CodecDescription</code> Object</h3>
+        <p>
+          A <code>CodecDescription</code> describes a single codec and how it is applied to both encoding or decoding.  This includes the packet type for the codec and any codec-specific parameters.
+        </p>
+        <dl title="dictionary CodecDescription" class="idl">
+          <dt>DOMString type</dt>
           <dd>
+            The MIME media type for the codec.  For example, <code>video/H264</code> or <code>audio/PCMA</code>.
+          </dd>
+          <dt>byte packetType</dt>
+          <dd>
+            The packet type that is used for this particular codec.
+          </dd>
+          <dt>DOMString fmtp</dt>
+          <dd>
+            Format-specific parameters for the codec, taken from the SDP definition for the codec.
           </dd>
         </dl>
       </section>

@@ -26,7 +26,7 @@
 
       // if the specification's copyright date is a range of years, specify
       // the start date here:
-      copyrightStart: "2012"
+      copyrightStart: "2012",
 
       // if there is a previously published draft, uncomment this and set its YYYY-MM-DD date
       // and its maturity status
@@ -267,7 +267,7 @@ pre.pseudoidl {
             The IP address (v4 or v6) for the realtime port.
           </dd>
 
-          <dt>unsigned short port</dt>
+          <dt>[EnforceRange] unsigned short port</dt>
           <dd>
             The UDP port number for the realtime port.
           </dd>
@@ -542,7 +542,7 @@ pre.pseudoidl {
           
           <pre class="pseudoidl">
 enum <span class="idlInterfaceID"><a id="widl-TurnRelayTransport">TurnRelayTransport</a></span> {
-    "<a href="#widl-TurnRelayTransport-udp">udp</a>", "<a href="#widl-TurnRelayTransport-udp">tcp</a>", "<a href="#widl-TurnRelayTransport-udp">tls</a>"
+    "<a href="#widl-TurnRelayTransport-udp">udp</a>", "<a href="#widl-TurnRelayTransport-tcp">tcp</a>", "<a href="#widl-TurnRelayTransport-tls">tls</a>"
 };
           </pre>
           <!-- <dl title="[NoInterfaceObject] enum TurnRelayTransport" class="enum" data-transform="transformEnum">-->
@@ -702,7 +702,7 @@ enum <span class="idlInterfaceID"><a id="widl-TurnRelayTransport">TurnRelayTrans
             <dd>
               The IP address, in string form.
             </dd>
-            <dt>unsigned short port</dt>
+            <dt>[EnforceRange] unsigned short port</dt>
             <dd>
               The port number.
             </dd>
@@ -998,11 +998,11 @@ function validateCertificate(certInfo) {
             <dd>
               A hint to a receiver that indicates how large a replay protection window it is requested to maintain.  This value MAY be ignored.
             </dd>
-            <dt>unsigned long rtpPacketCount = 281474976710656</dt>
+            <dt>unsigned long long rtpPacketCount = 281474976710656</dt>
             <dd>
               The number of packets that can be safely encrypted using this scheme for RTP.  Default value of 2<sup>48</sup>.
             </dd>
-            <dt>unsigned long rtcpPacketCount = 2147483648</dt>
+            <dt>unsigned long long rtcpPacketCount = 2147483648</dt>
             <dd>
               The number of packets that can be safely encrypted using this scheme for RTCP.  Default value of 2<sup>31</sup>.
             </dd>

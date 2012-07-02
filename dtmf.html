@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Dual-Tone Multifrequency API</title>
+    <meta http-equiv='Content-Type' content='text/html;charset=utf-8'/>
+    <!--
+        === NOTA BENE ===
+        For the three scripts below, if your spec resides on dev.w3 you can check them
+        out in the same tree and use relative links so that they'll work offline,
+      -->
+    <script src='http://dev.w3.org/2009/dap/ReSpec.js/js/respec.js' class='remove'></script>
+    <script class='remove'>
+      var respecConfig = {
+      // specification status (e.g. WD, LCWD, NOTE, etc.). If in doubt use ED.
+      specStatus:           "ED",
+
+      // the specification's short name, as in http://www.w3.org/TR/short-name/
+      shortName:            "dtmf",
+
+      // if your specification has a subtitle that goes below the main
+      // formal title, define it here
+      subtitle   :  "Web API for Sending and Receiving DTMF Tones",
+
+      // if you wish the publication date to be other than today, set this
+      // publishDate:  "2012-06-06",
+
+      // if the specification's copyright date is a range of years, specify
+      // the start date here:
+      copyrightStart: "2012",
+
+      // if there is a previously published draft, uncomment this and set its YYYY-MM-DD date
+      // and its maturity status
+      // previousPublishDate:  "1977-03-15",
+      // previousMaturity:  "WD",
+
+      // if there a publicly available Editor's Draft, this is the link
+      edDraftURI:           "https://github.com/martinthomson/webrtc/blob/master/dtmf.html",
+
+      // if this is a LCWD, uncomment and set the end of its review period
+      // lcEnd: "2009-08-05",
+
+      // if you want to have extra CSS, append them to this list
+      // it is recommended that the respec.css stylesheet be kept
+      extraCSS:             ["http://dev.w3.org/2009/dap/ReSpec.js/css/respec.css"],
+
+      // editors, add as many as you like
+      // only "name" is required
+      editors:  [
+      { name: "Martin Thomson", url: "mailto:martin.thomson@gmail.com",
+      company: "Microsoft", companyURL: "http://microsoft.com/" },
+      ],
+
+      // authors, add as many as you like.
+      // This is optional, uncomment if you have authors as well as editors.
+      // only "name" is required. Same format as editors.
+
+      authors:  [
+          { name: "Bernard Aboba", url: "mailto:bernard_aboba@hotmail.com",
+            company: "Microsoft", companyURL: "http://microsoft.com/" },
+      ],
+
+      // name of the WG
+      wg:           "WebRTC Working Group",
+
+      // URI of the public WG page
+      wgURI:        "http://www.w3.org/standards/techs/webrtc",
+
+      // name (without the @w3c.org) of the public mailing to which comments are due
+      wgPublicList: "public-webrtc",
+
+      // URI of the patent status for this WG, for Rec-track documents
+      // !!!! IMPORTANT !!!!
+      // This is important for Rec-track documents, do not copy a patent URI from a random
+      // document unless you know what you're doing. If in doubt ask your friendly neighbourhood
+      // Team Contact.
+      wgPatentURI:  ""
+      };
+    </script>
+    <style type="text/css">
+/* copied from pre.idl */
+pre.pseudoidl:before {
+    background: none repeat scroll 0 0 #90B8DE;
+    color: #FFFFFF;
+    content: "WebIDL";
+    display: block;
+    font-family: initial;
+    font-weight: bold;
+    margin: -1em 0 1em -1em;
+    padding: 3px;
+    width: 150px;
+}
+pre.pseudoidl {
+    border-bottom: 1px solid #90B8DE;
+    border-top: 1px solid #90B8DE;
+    line-height: 120%;
+    padding: 1em;
+}
+      </style>
+  </head>
+  <body>
+    <section id='abstract'>
+      <p>
+        This document describes how Dual-Tone Multifrequency events can be sent and received over media streams.  This allows browser-based realtime applications to interact with antiquated systems that convey information over audio channels using tones.
+      </p>
+    </section>
+    <section>
+      <h2>Introduction</h2>
+      <p>
+        Dual-Tone Multifrequency (DTMF) events are in widespread use on the Public Switched Telephone Network (PSTN) where they are used to convey user input to signaling and Interactive Voice Response (IVR) systems.  Given that old-fashioned telephones typically only have a small number of inputs, this archaic system continues to be used.  
+      </p>
+      <p>
+        In the interests of interoperation with legacy systems, this API describes how an audio track can be decorated with DTMF capabilities.
+      </p>
+
+      <p>
+        In order to generate DTMF on an associated audio stream, the stream is decorated as follows.  In this example, key press events are used to generate tones.
+      </p>
+      <pre class="example">
+var audioStream;
+navigator.getUserMedia({ audio: true }, function(audioStreamTrack) {
+    audioStream = new DtmfAudioStreamTrack(audioStreamTrack);
+    window.addEventListener('keydown', function(keyDownEvent) {
+        dtmfStream.startTone(keyDownEvent.char);
+    });
+    window.addEventListener('keyup', function(keyDownEvent) {
+        dtmfStream.endTone();
+    });
+});
+      </pre>
+
+      <p>
+        A receiver might wish to display the received tones to a user.  In extreme circumstances, they might want to play audio representations of the tones.
+      </p>
+      <pre class="example">
+dtmfStream = realtimeMediaStream.track;
+dtmfStream.addEventListener('tone', function(dtmfEvent) {
+    if (dtmfEvent.state === 'start') {
+        dtmfTones[dtmfEvent.tone].enable();
+        keyLog += dtmfEvent.tone;
+    } else if (dtmfEvent.state === 'end') {
+        dtmfTones[dtmfEvent.tone].disable();
+    }
+});
+      </pre>
+    </section>
+
+    <section>
+      <h2>The <code>DtmfAudioStreamTrack</code> Object</h2>
+      <p>
+        The <code>DtmfAudioStreamTrack</code> interface extends <code>MediaStreamTrack</code> to add DTMF-specific attributes and methods.
+      </p>
+      <p>
+        A <code>DtmfAudioStreamTrack</code> wraps an audio track, passing all <code>MediaStreamTrack</code> methods and parameters straight to the wrapped instance.  It cannot be instantiated without a corresponding audio track.
+      </p>
+      <p>
+        There is no sense in wrapping a <code>DtmfAudioStreamTrack</code> in another instance of a <code>DtmfAudioStreamTrack</code>, an exception is thrown if the constructor is passed an instance of <code>DtmfAudioStreamTrack</code>.
+      </p>
+      
+      <dl title="[Constructor(MediaStreamTrack audioTrack)] interface DtmfAudioStreamTrack : MediaStreamTrack, EventTarget" class="idl">
+        <dt>void playTones (DOMString tones, optional unsigned long duration = 100)</dt>
+        <dd>
+          <p>
+            Insert a DTMF tone into the stream.  The <code>tones</code> parameter includes a string of tones, each tone being represented by a single character.  Valid tone characters are: '0' through '9', '*', '#', 'A' through 'D'.  Lowercase 'a' through 'd' are converted to uppercase.  The ',' can be used to insert a "silent" tone into the sequence.  Any other characters are ignored.
+          </p>
+          <p>
+            The <code>duration</code> parameter specifies the time in milliseconds that each tone is active.  This value is clamped to a range between 50ms and 6000ms.
+          </p>
+          <p>
+            This method causes the browser to generate <code>startTone()</code> and <code>endTone()</code> calls at the appropriate points in time.  Calling <code>insertTones()</code> cancels any outstanding tone sending.  Any tone that is started when is immediately ended.
+          </p>
+        </dd>
+        <dt>void startTone (DOMString tone)</dt>
+        <dd>
+          <p>
+          Used for the manual control of DTMF sending by starting a DTMF tone.  The first character of the <code>tone</code> parameter MUST include a single DTMF tone character, including other characters has no effect.
+          </p>
+          <p>
+            It is not possible to start a tone if another tone is in progress.  Calling <code>startTone()</code> cancels any existing tone.
+          </p>
+          <p class="note">
+            It is possible to use this method to produce tones that are undetectable by some systems.  Applications that wish to have detectable tones should ensure that each tone is active for at least 50ms with a gap of at least 50ms between tones to allow receivers to detect the transition between tones.
+          </p>
+        </dd>
+        <dt>void endTone ()</dt>
+        <dd>
+          Ends any started DTMF tone.
+        </dd>
+        <dt>attribute DtmfCallback? ontone</dt>
+        <dd>
+          An event handler for tone events.  As tones start and end, events are passed to this target.  This includes events as they are inserted.
+        </dd>
+      </dl>
+
+      <section>
+        <h3>The <code>DtmfCallback</code> Callback</h3>
+        <p>
+          The <code>DtmfCallback</code> is invoked on registered event handlers when a DTMF tone starts or ends on a stream.
+        </p>
+        <pre class="pseudoidl">
+<span id="idl-def-DtmfCallback" class="idlCallback">callback <span class="idlDictionaryID">DtmfCallback</span> = void (<span class="idlParamType"><a>DtmfEvent</a></span> <span class="idlParamName">event</span>);</span>
+          </pre>
+      </section>
+      <section>
+        <h3>The <code>DtmfEvent</code> Object</h3>
+        <p>
+          This event signals the start or end of a DTMF tone.
+        </p>
+        <dl title="interface DtmfEvent : Event" class="idl">
+          <dt>readonly attribute DOMString tone</dt>
+          <dd>
+            A single character string containing the DTMF character.
+          </dd>
+          <dt>readonly attribute DtmfState state</dt>
+          <dd>
+            Whether the tone is starting, continuing or ending.
+          </dd>
+        </dl>
+      </section>
+
+      <section>
+        <h3>The <code>DtmfState</code> Enumeration</h3>
+        <p>
+          The <code>DtmfState</code> signals if a <code>DtmfEvent</code> is the start, continuation or end event for a given tone.
+          </p>
+        <pre class="pseudoidl">
+enum <span class="idlInterfaceID"><a id="widl-DtmfState">DtmfState</a></span> {
+    "<a href="#widl-DtmfState-start">start</a>", "<a href="#widl-DtmfState-continuation">continuation</a>", "<a href="#widl-DtmfState-end">end</a>"
+};
+        </pre>
+        <!-- <dl title="[NoInterfaceObject] enum TurnRelayTransport" class="enum" data-transform="transformEnum">-->
+        <dl class="attributes">
+          <dt id="widl-DtmfState-start"><code>start</code></dt>
+          <dd>
+            The DTMF event indicates the start of a tone.
+          </dd>
+          <dt id="widl-DtmfState-continuation"><code>continuation</code></dt>
+          <dd>
+            The DTMF event indicates the continuation of a tone.  This event MAY not be supported.
+          </dd>
+          <dt id="widl-DtmfState-end"><code>end</code></dt>
+          <dd>
+            The DTMF event indicates the end of a tone.
+          </dd>
+        </dl>
+      </section>
+    </section>
+    
+    <section class="appendix">
+      <h2>Acknowledgements</h2>
+      <p>
+        Your name here.
+      </p>
+    </section>
+  </body>
+</html>
