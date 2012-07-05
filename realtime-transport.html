@@ -787,7 +787,11 @@ enum <span class="idlInterfaceID"><a id="widl-TurnRelayTransport">TurnRelayTrans
           <dd>
             Whether the transport is currently open and able to receive data.  Newly created transports always start with this value set to <code>true</code>.  Note that absence or expiry of consent from the remote peer can cause a transport to be unable to send on an open transport.
           </dd>
-          <dt> void close()</dt>
+          <dt>readonly attribute unsigned long bandwidth</dt>
+          <dd>
+            The maximum available bandwidth on this transport, as detected by the browser.  This value can change over time.  Users of the transport operate within this envelope; packets that exceed this limit within any interval (browser-selected) are discarded.
+          </dd>
+          <dt>void close()</dt>
           <dd>
             This closes the transport.
           </dd>
@@ -806,6 +810,10 @@ enum <span class="idlInterfaceID"><a id="widl-TurnRelayTransport">TurnRelayTrans
           <dt>attribute EventHandler? onconsentexpired</dt>
           <dd>
             This event callback is fired when consent checks toward the remote peer time out and no packets are able to be sent on this transport.
+          </dd>
+          <dt>attribute EventHandler? onbandwidthchange</dt>
+          <dd>
+            This event callback is fired when the browser learns of a change in available bandwidth on the transport.  The browser MAY limit the rate of notifications, or suppress notification for small (10% or less) changes in available bandwidth.
           </dd>
         </dl>
       </section>

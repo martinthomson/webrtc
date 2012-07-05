@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>Dual-Tone Multifrequency API</title>
+    <title>Dual-Tone Multifrequency Tone API</title>
     <meta http-equiv='Content-Type' content='text/html;charset=utf-8'/>
     <!--
         === NOTA BENE ===
@@ -166,7 +166,7 @@ dtmfStream.addEventListener('tone', function(dtmfEvent) {
             The <code>duration</code> parameter specifies the time in milliseconds that each tone is active.  This value is clamped to a range between 50ms and 6000ms.
           </p>
           <p>
-            This method causes the browser to generate <code>startTone()</code> and <code>endTone()</code> calls at the appropriate points in time.  Calling <code>insertTones()</code> cancels any outstanding tone sending.  Any tone that is started when is immediately ended.
+            This method causes the browser to generate <code>startTone()</code> and <code>endTone()</code> calls at the appropriate points in time.  Calling <code>insertTones()</code> implicitly results in a call to <code>endTone()</code> prior to starting the sequence.
           </p>
         </dd>
         <dt>void startTone (DOMString tone)</dt>
@@ -175,7 +175,7 @@ dtmfStream.addEventListener('tone', function(dtmfEvent) {
           Used for the manual control of DTMF sending by starting a DTMF tone.  The first character of the <code>tone</code> parameter MUST include a single DTMF tone character, including other characters has no effect.
           </p>
           <p>
-            It is not possible to start a tone if another tone is in progress.  Calling <code>startTone()</code> cancels any existing tone.
+            It is not possible to start a tone if another tone is in progress.  Calling <code>startTone()</code> implicitly results in a call to <code>endTone()</code> prior to starting the tone.
           </p>
           <p class="note">
             It is possible to use this method to produce tones that are undetectable by some systems.  Applications that wish to have detectable tones should ensure that each tone is active for at least 50ms with a gap of at least 50ms between tones to allow receivers to detect the transition between tones.
@@ -183,7 +183,7 @@ dtmfStream.addEventListener('tone', function(dtmfEvent) {
         </dd>
         <dt>void endTone ()</dt>
         <dd>
-          Ends any started DTMF tone.
+          Ends any started DTMF tone or any sequence of tones.
         </dd>
         <dt>attribute DtmfCallback? ontone</dt>
         <dd>

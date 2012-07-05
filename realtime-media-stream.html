@@ -223,7 +223,7 @@ function receiveDescriptionFromSignaling(remoteDescription) {
           A <code>RemoteRealtimeMediaStream</code> represents a stream of realtime media that originates on the network.
         </p>
         <p>
-          The constructor to <code>RemoteRealtimeMediaStream</code> constructs a <code>MediaStreamTrack/code> based on the provided <code>RealtimeMediaDescription</code>.  If the browser is unable to construct this object, then an error is thrown.  This error might be thrown if the media description includes information for both audio and video tracks.
+          The constructor to <code>RemoteRealtimeMediaStream</code> constructs a <code>MediaStreamTrack</code> based on the provided <code>RealtimeMediaDescription</code>.  If the browser is unable to construct this object, then an error is thrown.  This error might be thrown if the media description includes information for both audio and video tracks.
         </p>
         <dl title="[Constructor(RealtimeMediaDescription description, RealtimeTransport transport, optional RealtimeTransport rtcpTransport)] interface RemoteRealtimeMediaStream : RealtimeMediaStream" class="idl">
           <dt>attribute UnknownPacketTypeEventHandler? onunknownpackettype</dt>
@@ -305,6 +305,7 @@ function receiveDescriptionFromSignaling(remoteDescription) {
           </dd>
         </dl>
       </section>
+
       <section>
         <h3>The <code>RtpStreamDescription</code> Object</h3>
         <p>
@@ -313,7 +314,7 @@ function receiveDescriptionFromSignaling(remoteDescription) {
         <dl title="dictionary RtpStreamDescription" class="idl">
           <dt>unsigned int ssrc</dt>
           <dd>
-            Each RTP stream has a discrete, 32-bit synchronization source (SSRC).  This value is used to identify a single stream in an RTP session.  The browser allocates a new, random SSRC from the set of available SSRC values for each stream, though this value MAY be overridden by the application.
+            Each RTP stream has a unique, 32-bit synchronization source (SSRC).  This value is used to identify a single stream in an RTP session.  The browser allocates a new, random SSRC from the set of available SSRC values for each stream, though this value MAY be overridden by the application.  The browser MAY alter this value if it detects an SSRC collision within the RTP session.
           </dd>
           <dt>unsigned long bandwidth?</dt>
           <dd>
@@ -373,6 +374,7 @@ enum <span class="idlInterfaceID"><a id="widl-RtcpFeature">RtcpFeature</a></span
             </dd>
           </dl>
       </section>
+
       <section>
         <h3>The <code>CodecDescription</code> Object</h3>
         <p>
