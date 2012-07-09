@@ -109,6 +109,7 @@ pre.pseudoidl {
       }
     </script>
   </head>
+
   <body>
     <section id='abstract'>
       <p>
@@ -118,6 +119,7 @@ pre.pseudoidl {
         The flow of packets is encrypted and&mdash;depending on the selected protocol&mdash;the browser is able to ensure that the recipient is willing to receive the flow. Setup is mediated by the web application.
       </p>
     </section>
+
     <section>
       <h2>Introduction</h2>
       <p>
@@ -392,7 +394,7 @@ pre.pseudoidl {
             The <code><dfn>RealtimePortCallback</dfn></code> callback function is passed to <code><a>openLocalPorts</a></code> or <code><a>allocateRelay</a></code>.   When the port is either successfully opened, or opening fails, the callback is invoked.  Opening local ports cannot fail.  Allocating a TURN relay port creates a single port.
           </p>
           <pre class="pseudoidl">
-<span id="idl-def-RealtimePortCallback" class="idlCallback">callback <span class="idlDictionaryID">RealtimePortCallback</span> = void (<span class="idlParamType">DOMString?</span> <span class="idlParamName">error</span>, <span class="idlParamType"><a class="idlType" href="#idl-def-RealtimePort">RealtimePort</a>[]</span> <span class="idlParamName">ports</span>);</span>
+<span id="idl-def-RealtimePortCallback" class="idlCallback">callback <span class="idlDictionaryID">RealtimePortCallback</span> = void (<span class="idlParamType">DOMString?</span> <span class="idlParamName">error</span>, <span class="idlParamType">sequence&lt;<a class="idlType" href="#idl-def-RealtimePort">RealtimePort</a>></span> <span class="idlParamName">ports</span>);</span>
           </pre>
           <p>
             The error parameter is set to <code>null</code> unless the allocation fails, in which case it contains a <code>DOMString</code> that explains the reasons for the error.  (Ed: Need to specify error code values here.)
@@ -660,7 +662,7 @@ enum <span class="idlInterfaceID"><a id="widl-TurnRelayTransport">TurnRelayTrans
             <dd>
               The STUN transaction ID is selected by the browser.  This object is only provided to users once a STUN transaction has successfully completed, ensuring that STUN responses cannot be spoofed by web attackers.
             </dd>
-            <dt>readonly attribute StunAttribute[] attributes</dt>
+            <dt>readonly attribute sequence&lt;StunAttribute> attributes</dt>
             <dd>
               The complete set of STUN attributes in the request in the order that they appear.  Note that attributes that appear after the <code>MESSAGE-INTEGRITY</code> are not authenticated.
             </dd>

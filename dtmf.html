@@ -109,16 +109,17 @@ pre.pseudoidl {
         Dual-Tone Multifrequency (DTMF) events are in widespread use on the Public Switched Telephone Network (PSTN) where they are used to convey user input to signaling and Interactive Voice Response (IVR) systems.  Given that old-fashioned telephones typically only have a small number of inputs, this archaic system continues to be used.  
       </p>
       <p>
-        In the interests of interoperation with legacy systems, this API describes how an audio track can be decorated with DTMF capabilities.
+        In the interests of interoperation with legacy systems, this API describes how an audio track [[!GETUSERMEDIA]] can be decorated with DTMF capabilities.
       </p>
 
       <p>
         In order to generate DTMF on an associated audio stream, the stream is decorated as follows.  In this example, key press events are used to generate tones.
       </p>
       <pre class="example">
-var audioStream;
-navigator.getUserMedia({ audio: true }, function(audioStreamTrack) {
-    audioStream = new DtmfAudioStreamTrack(audioStreamTrack);
+var dtmfstream;
+navigator.getUserMedia({ audio: true }, function(localMediaStream) {
+    var audioTrack = localMediaStream.audioTracks[0];
+    dtmfStream = new DtmfAudioStreamTrack(audioStreamTrack);
     window.addEventListener('keydown', function(keyDownEvent) {
         dtmfStream.startTone(keyDownEvent.char);
     });
@@ -132,7 +133,7 @@ navigator.getUserMedia({ audio: true }, function(audioStreamTrack) {
         A receiver might wish to display the received tones to a user.  In extreme circumstances, they might want to play audio representations of the tones.
       </p>
       <pre class="example">
-dtmfStream = realtimeMediaStream.track;
+var dtmfStream = realtimeMediaStream.track;
 dtmfStream.addEventListener('tone', function(dtmfEvent) {
     if (dtmfEvent.state === 'start') {
         dtmfTones[dtmfEvent.tone].enable();

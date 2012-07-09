@@ -94,7 +94,7 @@
         An RTP session consists of a series of RTP streams.  Each stream has a source and one or more sinks.  This API provides objects that directly map to RTP streams.  The source and sink of each realtime media stream is a <code>MediaStreamTrack</code> [[!mediacapture-streams]].  This allows applications to build more complex arrangements of streams, composing them into aggregate <code>MediaStream</code> collections.
       </p>
       <p>
-        Exchanging media in real time between browsers requires the use of a real time media transport, such as is described in [[!rt-transport]].
+        Exchanging media in real time between browsers requires the use of a real time media transport, such as is described in RealtimeTransport [[!realtime-transport]].
       </p>
     </section>
 
@@ -132,7 +132,7 @@ navigator.getUserMedia({ audio: true }, function(media) {
     var track = media.audioTracks[0];
     var description = new RealtimeMediaDescription(track);
     var localRtStream = new LocalRealtimeMediaStream(track, description, realtimeTransport);
-    signalingChannel.send(JSON.stringify(description));
+    signalingChannel.send(description.toDictionary());
 });
       </pre>
       <p>
@@ -171,10 +171,6 @@ function receiveDescriptionFromSignaling(remoteDescription) {
         <dt>readonly attribute RealtimeTransport rtcpTransport</dt>
         <dd>
           The transport that is being used to transmit and receive RTCP packets.
-        </dd>
-        <dt>readonly attribute RealtimeMediaDescription description</dt>
-        <dd>
-          The description that is being used for this stream.
         </dd>
         <dt>readonly attribute RealtimeMediaDescription description</dt>
         <dd>
@@ -255,8 +251,8 @@ function receiveDescriptionFromSignaling(remoteDescription) {
       <p>
         Specific sub-classes are used for describing outbound and inbound streams, though the basic parameters are common.
       </p>
-      <dl title="[Constructor (MediaStreamTrack track, optional RealtimeMediaDescriptionDictionary description, optional RealtimeMediaDescriptionConstraints constraints), Constructor (RealtimeMediaDescriptionDictionary description, optional RealtimeMediaDescriptionConstraints constraints), Constructor (RealtimeMediaDescriptionConstraints constraints)] interface RealtimeMediaDescription" class="idl">
-        <dt>readonly attribute RtpStreamDescription[] streams</dt>
+      <dl title="[Constructor (optional (MediaStreamTrack or RealtimeMediaDescriptionDictionary or RealtimeMediaDescriptionConstraints) constraints)] interface RealtimeMediaDescription" class="idl">
+        <dt>readonly attribute sequence&lt;RtpStreamDescription> streams</dt>
         <dd>
           A description of the RTP streams that comprise the realtime stream.  Most codecs only support a single RTP stream.  Only layered codecs such as H.264 SVC [[!RFC6190]] are encoded into multiple streams.
         </dd>
@@ -264,11 +260,11 @@ function receiveDescriptionFromSignaling(remoteDescription) {
         <dd>
           The RTCP Canonical Name (CNAME) used to identify this browser as a source of media in RTCP.  As described in [[I-D.rtcweb-rtp-usage]], the browser generates a short-term CNAME that cannot be linked to its identity over time.
         </dd>
-        <dt>readonly attribute RtcpFeature[] rtcpFeatures</dt>
+        <dt>readonly attribute sequence&lt;RtcpFeature> rtcpFeatures</dt>
         <dd>
           The set of RTCP features that are used by the described stream(s).
         </dd>
-        <dt>readonly attribute CodecDescription[] codecs</dt>
+        <dt>readonly attribute sequence&lt;CodecDescription> codecs</dt>
         <dd>
           A description of the set of codecs that are used by the described stream(s).
         </dd>
@@ -276,18 +272,23 @@ function receiveDescriptionFromSignaling(remoteDescription) {
         <dd>
           Update the description to include only those settings that are specified in the provided dictionary.  This can be used as a basis for negotiating a common set of capabilities between peers.  This throws an <code>Error</code> if the resulting description cannot possibly be used to describe any realtime stream because the constraints are incompatible with the current state of the description.
         </dd>
-        <dt>RealtimeMediaDescriptionDictionary update (RealtimeMediaDescriptionConstraints constraints)</dt>
+        <dt>RealtimeMediaDescription update (RealtimeMediaDescriptionConstraints constraints)</dt>
         <dd>
           Update the description to conform to the provided constraints.  This throws an <code>Error</code> if the mandatory constraints cannot be met.
         </dd>
+        <dt>RealtimeMediaDescriptionDictionary toDictionary ()</dt>
+        <dd>
+          Extracts the data from this description as a <code><a>RealtimeMediaDescriptionDictionary</a></code>.  This method allows for easier application access to data for exchange with peers.
+        </dd>
       </dl>
+
       <section>
         <h3>The <code>RealtimeMediaDescriptionDictionary</code> Object</h3>
         <p>
           Since a media description is likely to be exchanged over a signaling channel, this object represents the value of a <code><a>RealtimeMediaDescription</a></code> without the corresponding methods.
         </p>
         <dl title="dictionary RealtimeMediaDescriptionDictionary" class="idl">
-          <dt>RtpStreamDescription[] streams</dt>
+          <dt>sequence&lt;RtpStreamDescription> streams</dt>
           <dd>
             A description of the RTP streams that comprise the realtime stream.
           </dd>
@@ -295,11 +296,11 @@ function receiveDescriptionFromSignaling(remoteDescription) {
           <dd>
             The RTCP Canonical Name (CNAME) used to identify this browser as a source of media in RTCP.
           </dd>
-          <dt>RtcpFeature[] rtcpFeatures</dt>
+          <dt>sequence&lt;RtcpFeature> rtcpFeatures</dt>
           <dd>
             The set of RTCP features that are used by the described stream(s).
           </dd>
-          <dt>CodecDescription[] codecs</dt>
+          <dt>sequence&lt;CodecDescription> codecs</dt>
           <dd>
             A description of the set of codecs that are used by the described stream(s).
           </dd>
@@ -318,10 +319,11 @@ function receiveDescriptionFromSignaling(remoteDescription) {
           </dd>
           <dt>unsigned long bandwidth?</dt>
           <dd>
-            The bandwidth, in bits per second, allowed for this stream.
+            The maximum bandwidth, in bits per second, allowed for this stream.  This instructs the browser to constrain the stream to fit within this limit.  The browser is able to choose the method it uses to meet this constraint, which might include 
           </dd>
         </dl>
       </section>
+
       <section>
         <h3>The <code>RtcpFeature</code> Object</h3>
         <p>
@@ -329,7 +331,7 @@ function receiveDescriptionFromSignaling(remoteDescription) {
         </p>
           <pre class="pseudoidl">
 enum <span class="idlInterfaceID"><a id="widl-RtcpFeature">RtcpFeature</a></span> {
-    "<a href="#widl-RtcpFeature-avpf">avpf</a>", "<a href="#widl-RtcpFeature-nack">nack</a>", "<a href="#widl-RtcpFeature-pli">pli</a>", "<a href="#widl-RtcpFeature-sli">sli</a>", "<a href="#widl-RtcpFeature-rpsi">rpsi</a>", "<a href="#widl-RtcpFeature-reduced">reduced</a>", "<a href="#widl-RtcpFeature-retx">retx</a>", "<a href="#widl-RtcpFeature-fir">fir</a>", "<a href="#widl-RtcpFeature-tmmbr">tmmbr</a>"
+    "<a href="#widl-RtcpFeature-avpf">avpf</a>", "<a href="#widl-RtcpFeature-nack">nack</a>", "<a href="#widl-RtcpFeature-pli">pli</a>", "<a href="#widl-RtcpFeature-sli">sli</a>", "<a href="#widl-RtcpFeature-rpsi">rpsi</a>", "<a href="#widl-RtcpFeature-reduced">reduced</a>", "<a href="#widl-RtcpFeature-rtx">rtx</a>", "<a href="#widl-RtcpFeature-fir">fir</a>", "<a href="#widl-RtcpFeature-tmmbr">tmmbr</a>"
 };
           </pre>
           <!-- <dl title="[NoInterfaceObject] enum TurnRelayTransport" class="enum" data-transform="transformEnum">-->
@@ -359,7 +361,7 @@ enum <span class="idlInterfaceID"><a id="widl-RtcpFeature">RtcpFeature</a></span
             <dd>
               Reduced sized RTCP [[!RFC5506]].
             </dd>
-            <dt id="widl-RtcpFeature-retx"><code>retx</code></dt>
+            <dt id="widl-RtcpFeature-rtx"><code>rtx</code></dt>
             <dd>
               RTP retransmission [[!RFC4588]].
             </dd>
@@ -380,6 +382,9 @@ enum <span class="idlInterfaceID"><a id="widl-RtcpFeature">RtcpFeature</a></span
         <p>
           A <code>CodecDescription</code> describes a single codec and how it is applied to both encoding or decoding.  This includes the packet type for the codec and any codec-specific parameters.
         </p>
+        <p>
+          When generating a <code>RealtimeMediaDescription</code>, the browser MUST specify values for all fields.  Values can be omitted from <code>RealtimeMediaDescriptionDictionary</code> values, which allows the browser to select values for any unspecified values.
+        </p>
         <dl title="dictionary CodecDescription" class="idl">
           <dt>DOMString type</dt>
           <dd>
@@ -389,9 +394,41 @@ enum <span class="idlInterfaceID"><a id="widl-RtcpFeature">RtcpFeature</a></span
           <dd>
             The packet type that is used for this particular codec.
           </dd>
+          <dt>unsigned long clockRate</dt>
+          <dd>
+            The clock rate for this codec description, specified in Hertz.
+          </dd>
+          <dt>boolean silenceSuppression = true</dt>
+          <dd>
+            For audio codecs that support silence suppression, this value determines if the codec is permitted to perform silence suppression.
+          </dd>
           <dt>DOMString fmtp</dt>
           <dd>
             Format-specific parameters for the codec, taken from the SDP definition for the codec.
+          </dd>
+        </dl>
+      </section>
+      <section>
+        <h3>The <code>RealtimeMediaDescriptionConstraints</code> Object</h3>
+        <p>
+          The constraints structure is defined in [[!GETUSERMEDIA]].  <code><dfn>RealtimeMediaDescriptionConstraints</dfn></code> uses this scheme with a different set of possible constraints.
+        </p>
+        <p>
+          The following constraints are defined:
+        </p>
+        
+        <dl>
+          <dt>rtcp</dt>
+          <dd>
+            A set of RTCP features (in an array) that contains all the features that are permitted and desired.  This constraint can be met if the RTCP features on all streams are exactly the provided set.
+          </dd>
+          <dt>silenceSuppression</dt>
+          <dd>
+            A <code>boolean</code> value that determines the value for the <code>silenceSuppression</code> parameter of the <code><a>CodecDescription</a></code>.
+          </dd>
+          <dt>bandwidth</dt>
+          <dd>
+            An <code>unsigned long</code> value for the overall bandwidth allocated to the stream (or set of streams).
           </dd>
         </dl>
       </section>
@@ -400,7 +437,7 @@ enum <span class="idlInterfaceID"><a id="widl-RtcpFeature">RtcpFeature</a></span
     <section class='appendix'>
       <h2>Acknowledgements</h2>
       <p>
-        Your name here.
+        Travis Leithead provided feedback on the design.
       </p>
     </section>
   </body>
