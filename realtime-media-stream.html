@@ -8,8 +8,8 @@
          For the three scripts below, if your spec resides on dev.w3 you can check them
          out in the same tree and use relative links so that they'll work offline,
       -->
-    <script src='http://dev.w3.org/2009/dap/ReSpec.js/js/respec.js' class='remove'></script>
-    <script class='remove'>
+    <script src="http://www.w3.org/Tools/respec/respec-w3c-common" class="remove"></script>
+    <script class="remove">
       var respecConfig = {
       // specification status (e.g. WD, LCWD, NOTE, etc.). If in doubt use ED.
       specStatus:           "Member-SUBM",
@@ -73,9 +73,29 @@
       // This is important for Rec-track documents, do not copy a patent URI from a random
       // document unless you know what you're doing. If in doubt ask your friendly neighbourhood
       // Team Contact.
-      wgPatentURI:  ""
+      wgPatentURI:  "http://www.w3.org/2004/01/pp-impl/47318/status"
       };
     </script>
+    <style type="text/css">
+/* copied from pre.idl */
+pre.pseudoidl:before {
+    background: none repeat scroll 0 0 #90B8DE;
+    color: #FFFFFF;
+    content: "WebIDL";
+    display: block;
+    font-family: initial;
+    font-weight: bold;
+    margin: -1em 0 1em -1em;
+    padding: 3px;
+    width: 150px;
+}
+pre.pseudoidl {
+    border-bottom: 1px solid #90B8DE;
+    border-top: 1px solid #90B8DE;
+    line-height: 120%;
+    padding: 1em;
+}
+    </style>
   </head>
   <body>
     <section id="abstract">
@@ -91,7 +111,7 @@
         Interoperable real-time media between browsers uses RTP [[!I-D.rtcweb-rtp-usage]].  RTP depends on the existence of a signaling channel to establish a common understanding of the meaning of packets.  This includes identification of different streams, codecs, and codec parameters.
       </p>
       <p>
-        An RTP session consists of a series of RTP streams.  Each stream has a source and one or more sinks.  This API provides objects that directly map to RTP streams.  The source and sink of each real-time media stream is a <code>MediaStreamTrack</code> [[!mediacapture-streams]].  This allows applications to build more complex arrangements of streams, composing them into aggregate <code>MediaStream</code> collections.
+        An RTP session consists of a series of RTP streams.  Each stream has a source and one or more sinks.  This API provides objects that directly map to RTP streams.  The source and sink of each real-time media stream is a <code>MediaStreamTrack</code> [[!GETUSERMEDIA]].  This allows applications to build more complex arrangements of streams, composing them into aggregate <code>MediaStream</code> collections.
       </p>
       <p>
         Exchanging media in real time between browsers requires the use of a real time media transport, such as is described in RealtimeTransport [[!realtime-transport]].
@@ -118,14 +138,14 @@
         </ol>
       </p>
       <p>
-        Local capture and playback of media (steps 1. and 4.) can be achieved by the media capture API [[!mediacapture-streams]].  The real-time media streaming API provides access to functions that allow for the transmission of media stream across a network between these two points.
+        Local capture and playback of media (steps 1. and 4.) can be achieved by the media capture API [[!GETUSERMEDIA]].  The real-time media streaming API provides access to functions that allow for the transmission of media stream across a network between these two points.
       </p>
       <img src="overview.png" alt="Image showing overview of real-time media" title="Overview of Real-Time Media" />
       <p>
         The basic primitive of this API, the <code><a>RealtimeMediaStream</a></code> is a single, unidirectional stream of media.  This basic unit can be used to assemble more complex communications scenarios.  For example, an application that wishes to enable two-way audio and video communications between peers can create four such streams: an audio stream in each direction, plus a video stream in each direction.
       </p>
       <p>
-        In order to transmit a track from a local media stream&mdash;audio or video&mdash;an application takes the track and a <code>RealtimeTransport</code> [[!rt-transport]] and creates a <code><a>RealtimeMediaStream</a></code>.  A <code><a>RealtimeMediaDescription</a></code> is used to describe how the track is encoded.
+        In order to transmit a track from a local media stream&mdash;audio or video&mdash;an application takes the track and a <code>RealtimeTransport</code> [[!realtime-transport]] and creates a <code><a>RealtimeMediaStream</a></code>.  A <code><a>RealtimeMediaDescription</a></code> is used to describe how the track is encoded.
       </p>
       <pre class="example">
 navigator.getUserMedia({ audio: true }, function(media) {
