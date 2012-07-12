@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>Realtime Media Stream</title>
+    <title>Real-Time Media Stream API</title>
     <meta http-equiv='Content-Type' content='text/html;charset=utf-8'/>
     <!-- 
          === NOTA BENE ===
@@ -12,7 +12,7 @@
     <script class='remove'>
       var respecConfig = {
       // specification status (e.g. WD, LCWD, NOTE, etc.). If in doubt use ED.
-      specStatus:           "ED",
+      specStatus:           "Member-SUBM",
       
       // the specification's short name, as in http://www.w3.org/TR/short-name/
       shortName:            "rt-media",
@@ -79,19 +79,19 @@
   </head>
   <body>
     <section id="abstract">
-      An API is described for sourcing and terminating streams of realtime media in a browser.  The API provides a means of describing how media streams are serialized into a stream of RTP packets or deserialized from a stream of packets.
+      An API is described for sourcing and terminating streams of real-time media in a browser.  The API provides a means of describing how media streams are serialized into a stream of RTP packets or deserialized from a stream of packets.
     </section>
     
     <section>
       <h2>Introduction</h2>
       <p>
-        Realtime communications between browsers depends on the packetization of media.  This API provides a way to control how media streams are turned into packets and how those packets are turned into media streams.
+        Real-Time communications between browsers depends on the packetization of media.  This API provides a way to control how media streams are turned into packets and how those packets are turned into media streams.
       </p>
       <p>
-        Interoperable realtime media between browsers uses RTP [[!I-D.rtcweb-rtp-usage]].  RTP depends on the existence of a signaling channel to establish a common understanding of the meaning of packets.  This includes identification of different streams, codecs, and codec parameters.
+        Interoperable real-time media between browsers uses RTP [[!I-D.rtcweb-rtp-usage]].  RTP depends on the existence of a signaling channel to establish a common understanding of the meaning of packets.  This includes identification of different streams, codecs, and codec parameters.
       </p>
       <p>
-        An RTP session consists of a series of RTP streams.  Each stream has a source and one or more sinks.  This API provides objects that directly map to RTP streams.  The source and sink of each realtime media stream is a <code>MediaStreamTrack</code> [[!mediacapture-streams]].  This allows applications to build more complex arrangements of streams, composing them into aggregate <code>MediaStream</code> collections.
+        An RTP session consists of a series of RTP streams.  Each stream has a source and one or more sinks.  This API provides objects that directly map to RTP streams.  The source and sink of each real-time media stream is a <code>MediaStreamTrack</code> [[!mediacapture-streams]].  This allows applications to build more complex arrangements of streams, composing them into aggregate <code>MediaStream</code> collections.
       </p>
       <p>
         Exchanging media in real time between browsers requires the use of a real time media transport, such as is described in RealtimeTransport [[!realtime-transport]].
@@ -101,7 +101,7 @@
     <section>
       <h2>Overview</h2>
       <p>
-        The exchange of realtime media between two browsers follows the process:
+        The exchange of real-time media between two browsers follows the process:
         <ol>
           <li>
             At the media source, input devices are opened for capture.
@@ -118,9 +118,9 @@
         </ol>
       </p>
       <p>
-        Local capture and playback of media (steps 1. and 4.) can be achieved by the media capture API [[!mediacapture-streams]].  The realtime media streaming API provides access to functions that allow for the transmission of media stream across a network between these two points.
+        Local capture and playback of media (steps 1. and 4.) can be achieved by the media capture API [[!mediacapture-streams]].  The real-time media streaming API provides access to functions that allow for the transmission of media stream across a network between these two points.
       </p>
-      <img src="overview.png" alt="Image showing overview of realtime media" title="Overview of Realtime Media" />
+      <img src="overview.png" alt="Image showing overview of real-time media" title="Overview of Real-Time Media" />
       <p>
         The basic primitive of this API, the <code><a>RealtimeMediaStream</a></code> is a single, unidirectional stream of media.  This basic unit can be used to assemble more complex communications scenarios.  For example, an application that wishes to enable two-way audio and video communications between peers can create four such streams: an audio stream in each direction, plus a video stream in each direction.
       </p>
@@ -188,7 +188,7 @@ function receiveDescriptionFromSignaling(remoteDescription) {
       <section>
         <h3>The <code>LocalRealtimeMediaStream</code> Object</h3>
         <p>
-          The <code>LocalRealtimeMediaStream</code> represents a locally-sourced stream of realtime media.
+          The <code>LocalRealtimeMediaStream</code> represents a locally-sourced stream of real-time media.
         </p>
         <p>
           The constructor for <code>LocalRealtimeMediaStream</code> ignores any information in the <code>RealtimeMediaDescription</code> that it is passed that is not applicable to the provided track.
@@ -216,7 +216,7 @@ function receiveDescriptionFromSignaling(remoteDescription) {
       <section>
         <h3>The <code>RemoteRealtimeMediaStream</code> Object</h3>
         <p>
-          A <code>RemoteRealtimeMediaStream</code> represents a stream of realtime media that originates on the network.
+          A <code>RemoteRealtimeMediaStream</code> represents a stream of real-time media that originates on the network.
         </p>
         <p>
           The constructor to <code>RemoteRealtimeMediaStream</code> constructs a <code>MediaStreamTrack</code> based on the provided <code>RealtimeMediaDescription</code>.  If the browser is unable to construct this object, then an error is thrown.  This error might be thrown if the media description includes information for both audio and video tracks.
@@ -254,7 +254,7 @@ function receiveDescriptionFromSignaling(remoteDescription) {
       <dl title="[Constructor (optional (MediaStreamTrack or RealtimeMediaDescriptionDictionary or RealtimeMediaDescriptionConstraints) constraints)] interface RealtimeMediaDescription" class="idl">
         <dt>readonly attribute sequence&lt;RtpStreamDescription> streams</dt>
         <dd>
-          A description of the RTP streams that comprise the realtime stream.  Most codecs only support a single RTP stream.  Only layered codecs such as H.264 SVC [[!RFC6190]] are encoded into multiple streams.
+          A description of the RTP streams that comprise the real-time stream.  Most codecs only support a single RTP stream.  Only layered codecs such as H.264 SVC [[!RFC6190]] are encoded into multiple streams.
         </dd>
         <dt>readonly attribute DOMString cname</dt>
         <dd>
@@ -270,7 +270,7 @@ function receiveDescriptionFromSignaling(remoteDescription) {
         </dd>
         <dt>RealtimeMediaDesctiption update (RealtimeMediaDescriptionDictionary constraints)</dt>
         <dd>
-          Update the description to include only those settings that are specified in the provided dictionary.  This can be used as a basis for negotiating a common set of capabilities between peers.  This throws an <code>Error</code> if the resulting description cannot possibly be used to describe any realtime stream because the constraints are incompatible with the current state of the description.
+          Update the description to include only those settings that are specified in the provided dictionary.  This can be used as a basis for negotiating a common set of capabilities between peers.  This throws an <code>Error</code> if the resulting description cannot possibly be used to describe any real-time stream because the constraints are incompatible with the current state of the description.
         </dd>
         <dt>RealtimeMediaDescription update (RealtimeMediaDescriptionConstraints constraints)</dt>
         <dd>
@@ -290,7 +290,7 @@ function receiveDescriptionFromSignaling(remoteDescription) {
         <dl title="dictionary RealtimeMediaDescriptionDictionary" class="idl">
           <dt>sequence&lt;RtpStreamDescription> streams</dt>
           <dd>
-            A description of the RTP streams that comprise the realtime stream.
+            A description of the RTP streams that comprise the real-time stream.
           </dd>
           <dt>DOMString cname</dt>
           <dd>
@@ -327,7 +327,7 @@ function receiveDescriptionFromSignaling(remoteDescription) {
       <section>
         <h3>The <code>RtcpFeature</code> Object</h3>
         <p>
-          The realtime feedback channel provided by RTCP [[!RFC3550]] supports a number of optional features.  This enumeration identifies a specific features.  An array of these values are used to describe each realtime stream.
+          The real-time feedback channel provided by RTCP [[!RFC3550]] supports a number of optional features.  This enumeration identifies a specific features.  An array of these values are used to describe each real-time stream.
         </p>
           <pre class="pseudoidl">
 enum <span class="idlInterfaceID"><a id="widl-RtcpFeature">RtcpFeature</a></span> {

@@ -1,18 +1,18 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>Realtime Peer-to-Peer Transport API</title>
+    <title>Real-Time Peer-to-Peer Transport API</title>
     <meta http-equiv='Content-Type' content='text/html;charset=utf-8'/>
     <!--
         === NOTA BENE ===
         For the three scripts below, if your spec resides on dev.w3 you can check them
-        out in the same tree and use relative links so that they'll work offline,
+        out in the same tree a(Title of document 3)nd use relative links so that they'll work offline,
       -->
     <script src='http://dev.w3.org/2009/dap/ReSpec.js/js/respec.js' class='remove'></script>
     <script class='remove'>
       var respecConfig = {
       // specification status (e.g. WD, LCWD, NOTE, etc.). If in doubt use ED.
-      specStatus:           "ED",
+      specStatus:           "Member-SUBM",
 
       // the specification's short name, as in http://www.w3.org/TR/short-name/
       shortName:            "rt-transport",
@@ -123,7 +123,7 @@ pre.pseudoidl {
     <section>
       <h2>Introduction</h2>
       <p>
-        Establishing flows of realtime media to and from browsers requires a transport that is suited to this purpose.  This document describes how realtime transport flows can be created in a browser. A realtime transport flow is a construct that allows for bidirectional exchange of UDP packets.
+        Establishing flows of real-time media to and from browsers requires a transport that is suited to this purpose.  This document describes how real-time transport flows can be created in a browser. A real-time transport flow is a construct that allows for bidirectional exchange of UDP packets.
       </p>
       <p>
         UDP and RTP [[!RFC3550]] provide the means for the delivery of time-sensitive media between peers.  This channel is secured using SRTP [[!RFC3711]] with key negotiation in signaling or through DTLS.
@@ -138,12 +138,7 @@ pre.pseudoidl {
     <section>
       <h2>Requirements</h2>
       <p>
-        The goal of this API is to:
-        <ul>
-          <li>establish a flow of packets between two peers suitable for carrying media</li>
-          <li>provide confidentiality for communications</li>
-          <li>ensure that excessive packets are not sent to unwilling hosts</li>
-        </ul>
+        The goal of this API is to establish a secured flow of packets between two peers suitable for carrying media.
       </p>
 
       <section>
@@ -174,10 +169,10 @@ pre.pseudoidl {
     <section>
       <h2>Overview</h2>
       <p>
-        Establishing realtime media transport requires the interaction of two objects:
+        Establishing real-time media transport requires the interaction of two objects:
         <ul>
           <li>
-            The <code><a>RealtimePort</a></code> is the end point for a realtime transport.  This represents a UDP port, opened by the browser.  The RealtimePort encapsulates the functions necessary to perform an ICE negotiation [[!RFC5245]].  In ICE terms, a <code><a>RealtimePort</a></code> is a local candidate.
+            The <code><a>RealtimePort</a></code> is the end point for a real-time transport.  This represents a UDP port, opened by the browser.  The RealtimePort encapsulates the functions necessary to perform an ICE negotiation [[!RFC5245]].  In ICE terms, a <code><a>RealtimePort</a></code> is a local candidate.
           </li>
           <li>
             The <code><a>RealtimeTransport</a></code> is a peer-to-peer bearer for secured media.  It binds a local <code><a>RealtimePort</a></code> to a remote <code><a>RealtimePort</a></code> and enables the bidirectional exchange of media packets.
@@ -188,7 +183,7 @@ pre.pseudoidl {
         In order to establish a transport between a local peer and remote peer, the following process is applied:
         <ol>
           <li>
-            The local peer opens one or more realtime ports.
+            The local peer opens one or more real-time ports.
           </li>
           <li>
             The local peer then has to learn of the ports that its remote peer has opened.  This uses a signaling channel specific to the application.  For instance, a web application could use previously HTTP requests or Websockets connections for this purpose.
@@ -197,7 +192,7 @@ pre.pseudoidl {
             A process of discovery is used to find a local and remote port pair (a candidate pair) that can exchange UDP packets.  One or more connectivity checks are made from different local ports toward different remote ports.  A successful connectivity check indicates that packets can reach the peer and that the peer consents to receive packets.  
           </li>
           <li>
-            Finally, a realtime transport is established on the pair of ports.  A security context is established so that secured media packets are able to flow in both directions between peers.  Realtime media streams can then be added to the transport.
+            Finally, a real-time transport is established on the pair of ports.  A security context is established so that secured media packets are able to flow in both directions between peers.  Real-Time media streams can then be added to the transport.
           </li>
         </ol>
       </p>
@@ -211,10 +206,10 @@ pre.pseudoidl {
     });
       </pre>
       <p>
-        Each realtime port consists of an IP address, a port number, a username fragment and password.  This information is exchanged with the remote peer using whatever signaling mechanism is chosen by the application.
+        Each real-time port consists of an IP address, a port number, a username fragment and password.  This information is exchanged with the remote peer using whatever signaling mechanism is chosen by the application.
       </p>
       <p>
-        Other forms of realtime port might be necessary for successful traversal of middleboxes like firewalls and NATs.  For instance, a relay port (i.e., relay candidate) uses a relay server to forward packets.  Because the relay server is publically reachable, many of the concerns with middlebox traversal do not apply to it, enabling communication in more challenging network conditions.
+        Other forms of real-time port might be necessary for successful traversal of middleboxes like firewalls and NATs.  For instance, a relay port (i.e., relay candidate) uses a relay server to forward packets.  Because the relay server is publically reachable, many of the concerns with middlebox traversal do not apply to it, enabling communication in more challenging network conditions.
       </p>
       <pre class="example">
     RealtimePort.allocateRelay(relay, function(error, relayCandidates) {
@@ -224,7 +219,7 @@ pre.pseudoidl {
     });
       </pre>
       <p>
-        Local and remote realtime ports are paired and connectivity checking is used for each pair to determine which ports can be used for exchanging packets.
+        Local and remote real-time ports are paired and connectivity checking is used for each pair to determine which ports can be used for exchanging packets.
       </p>
       <pre class="example">
     function receivePeerCandidates(remotePorts) {
@@ -251,7 +246,7 @@ pre.pseudoidl {
     </section>
 
     <section>
-      <h2>Realtime Ports</h2>
+      <h2>Real-Time Ports</h2>
       <p>
         A <code><dfn>RealtimePort</dfn></code> object represents an open UDP port.  The <code><a>RealtimePort</a></code> also encapsulates all the information necessary to find and use that port.
       </p>
@@ -260,18 +255,18 @@ pre.pseudoidl {
         <h3>The <code>RemoteRealtimePort</code> Object</h3>
 
         <p>
-          The <code><dfn>RemoteRealtimePort</dfn></code> object is used to describe a remote realtime port.  It is a simple dictionary of values, sufficient to describe how to connect to a remote peer.
+          The <code><dfn>RemoteRealtimePort</dfn></code> object is used to describe a remote real-time port.  It is a simple dictionary of values, sufficient to describe how to connect to a remote peer.
         </p>
 
         <dl title="dictionary RemoteRealtimePort" class="idl">
           <dt>DOMString ip</dt>
           <dd>
-            The IP address (v4 or v6) for the realtime port.
+            The IP address (v4 or v6) for the real-time port.
           </dd>
 
           <dt>[EnforceRange] unsigned short port</dt>
           <dd>
-            The UDP port number for the realtime port.
+            The UDP port number for the real-time port.
           </dd>
 
           <dt>DOMString ufrag</dt>
@@ -305,12 +300,12 @@ pre.pseudoidl {
         <dl title="interface RealtimePort : EventTarget" class="idl">
           <dt>readonly attribute DOMString ip</dt>
           <dd>
-            The IP address (v4 or v6) for the realtime port.
+            The IP address (v4 or v6) for the real-time port.
           </dd>
 
           <dt>readonly attribute unsigned short port</dt>
           <dd>
-            The UDP port number for the realtime port.
+            The UDP port number for the real-time port.
           </dd>
 
           <dt>readonly attribute DOMString ufrag</dt>
@@ -334,7 +329,7 @@ pre.pseudoidl {
           </dd>
           <dt>void allocateRelay (TurnServer turnServer, RelayCallback callback)</dt>
           <dd>
-            <a href="allocateRelay">Allocate a relay port on a TURN server</a> over UDP using this local realtime port as the base.
+            <a href="allocateRelay">Allocate a relay port on a TURN server</a> over UDP using this local real-time port as the base.
           </dd>
           
           <dt>[TreatNonCallableAsNull] attribute EventHandler? onnetworkchange</dt>
@@ -359,7 +354,7 @@ pre.pseudoidl {
 
           <dt>[TreatNonCallableAsNull] attribute EventHandler? onclose</dt>
           <dd>
-            Invoked when the realtime port is closed.
+            Invoked when the real-time port is closed.
           </dd>
 
           <dt>readonly attribute boolean open</dt>
@@ -475,7 +470,7 @@ pre.pseudoidl {
             A <dfn>server reflexive address</dfn> is the addressing information for a given port, as seen by a server.  The server reports the address that it sees when the browser sends it a packet.  Where there are network address translation (NAT) middleboxes between the browser and the server, this reveals the translated address at the NAT, a value that might be undetectable from the browser.
           </p>
           <p>
-            Server reflexive addresses are gathered by making connectivity checks to STUN servers from a specific local realtime port.  The server provides the address that it sees in the <code>XOR-MAPPED-ADDRESS</code> attribute of the response.
+            Server reflexive addresses are gathered by making connectivity checks to STUN servers from a specific local real-time port.  The server provides the address that it sees in the <code>XOR-MAPPED-ADDRESS</code> attribute of the response.
           </p>
           <p>Using a server reflexive address ultimately results in packets arriving at the corresponding host-local port.  Therefore, server reflexive addresses do not require the creation of additional <code><a>RealtimePort</a></code> objects in the browser.
           </p>
@@ -567,13 +562,13 @@ enum <span class="idlInterfaceID"><a id="widl-TurnRelayTransport">TurnRelayTrans
         </section>
         
         <section>
-          <h4>Closing Realtime Ports</h4>
+          <h4>Closing Real-Time Ports</h4>
           <p>
-            Realtime ports can be closed by calling <code><a href="#widl-RealtimePort-close">close</a>()</code>.  This sets the <var>open</var> attribute to false and closes any transports that use the port.   Any attempt to invoke methods on a closed <code><a>RealtimePort</a></code> triggers an exception, except for <code>status(<var>remotePort</var>)</code> that can harmlessly return <code>false</code>.
+            Real-Time ports can be closed by calling <code><a href="#widl-RealtimePort-close">close</a>()</code>.  This sets the <var>open</var> attribute to false and closes any transports that use the port.   Any attempt to invoke methods on a closed <code><a>RealtimePort</a></code> triggers an exception, except for <code>status(<var>remotePort</var>)</code> that can harmlessly return <code>false</code>.
           </p>
 
           <p>
-            Closing a realtime port does not prevent packets from arriving, though it stops them from being seen by applications and thus connectivity checks to these ports fail.  A well-behaved remote peer will eventually stop sending when connectivity checks fail.
+            Closing a real-time port does not prevent packets from arriving, though it stops them from being seen by applications and thus connectivity checks to these ports fail.  A well-behaved remote peer will eventually stop sending when connectivity checks fail.
           </p>
         </section>
       </section>
@@ -613,9 +608,9 @@ enum <span class="idlInterfaceID"><a id="widl-TurnRelayTransport">TurnRelayTrans
         </section>
 
         <section id="tracking">
-          <h4>Tracking Valid Realtime Port Pairs</h4>
+          <h4>Tracking Valid Real-Time Port Pairs</h4>
           <p>
-            The browser is responsible for tracking valid remote realtime port pairs.  Any time that a locally originated connectivity check succeeds, the browser marks the pair of ports (local port + remote port) as valid.  The valid marking lasts for a fixed duration.  The browser SHOULD keep a port pair valid for 40 seconds.
+            The browser is responsible for tracking valid remote real-time port pairs.  Any time that a locally originated connectivity check succeeds, the browser marks the pair of ports (local port + remote port) as valid.  The valid marking lasts for a fixed duration.  The browser SHOULD keep a port pair valid for 40 seconds.
           </p>
           <p>
             The browser MUST NOT send anything other than a connectivity check unless the port pair is valid.  This ensures that the remote peer has consented to receive packets and that the consent is recent.
@@ -645,7 +640,7 @@ enum <span class="idlInterfaceID"><a id="widl-TurnRelayTransport">TurnRelayTrans
             </ul>
           </p>
           <p>
-            Applications can register a callback listener against a realtime port.  This function is called when a valid connectivity check is received.  The callback signature is identical to the callback for locally originated conectivity checks.  Both the request and response message are passed to the callback.
+            Applications can register a callback listener against a real-time port.  This function is called when a valid connectivity check is received.  The callback signature is identical to the callback for locally originated conectivity checks.  Both the request and response message are passed to the callback.
           </p>
           <p>
             Browsers respond to connectivity checks on each port that it opens.  The browser MUST limit the number of unique peers that it generates connectivity check responses for.  This ensures that the number of flows that can be created towards the browser from different browsers is limited.  This mitigates an attack where a web attacker shares open port information with multiple browsers.
@@ -715,7 +710,7 @@ enum <span class="idlInterfaceID"><a id="widl-TurnRelayTransport">TurnRelayTrans
       <section id="networkchange">
         <h3>Network Interface Changes</h3>
         <p>
-          Network interfaces are imperfect and impermanent.  They can change, appear and disappear with no warning, especially on mobile devices.  Reacting to changes in connectivity is a crucial part of providing good realtime transport.
+          Network interfaces are imperfect and impermanent.  They can change, appear and disappear with no warning, especially on mobile devices.  Reacting to changes in connectivity is a crucial part of providing good real-time transport.
         </p>
         <p>
           The <code><dfn>networkchange</dfn></code> event is registered against a local <code><a>RealtimePort</a></code>.
@@ -743,10 +738,10 @@ enum <span class="idlInterfaceID"><a id="widl-TurnRelayTransport">TurnRelayTrans
     </section>
 
     <section>
-      <h2>Realtime Transport</h2>
+      <h2>Real-Time Transport</h2>
       
       <p>
-        A <dfn>RealtimeTransport</dfn> represents the flow of packets between a local and a remote realtime port.
+        A <dfn>RealtimeTransport</dfn> represents the flow of packets between a local and a remote real-time port.
       </p>
       <p>
         Upon creation, a <code><a>RealtimeTransport</a></code> beings automatically generating connectivity checks toward the selected remote peer.  If a consent check fails, the transport remains open, but no packets can be sent.
@@ -761,11 +756,11 @@ enum <span class="idlInterfaceID"><a id="widl-TurnRelayTransport">TurnRelayTrans
           
           <dt>readonly attribute RealtimePort localPort</dt>
           <dd>
-            The local realtime port that is used for this transport.
+            The local real-time port that is used for this transport.
           </dd>
           <dt>readonly attribute SimpleRealtimePort remotePort</dt>
           <dd>
-            The remote realtime port that is used for this transport.
+            The remote real-time port that is used for this transport.
           </dd>
           <dt>readonly attribute boolean dtls</dt>
           <dd>
@@ -848,7 +843,7 @@ enum <span class="idlInterfaceID"><a id="widl-TurnRelayTransport">TurnRelayTrans
           </dd>
         </dl>
         <section>
-          <h4>Realtime Transport Modes</h4>
+          <h4>Real-Time Transport Modes</h4>
           <p>
             </p>
           <pre class="pseudoidl">
@@ -917,7 +912,7 @@ enum <span class="idlInterfaceID"><a id="widl-DtlsRole">DtlsRole</a></span> {
           <dl title="[NoInterfaceObject] interface CertificateInformation" class="idl">
             <dt>static CertificateInformation getLocalCertificate()</dt>
             <dd>
-              This method retrieves the certificate that the browser will use for creating realtime transport.  The application can use this information to signal to peers.
+              This method retrieves the certificate that the browser will use for creating real-time transport.  The application can use this information to signal to peers.
             </dd>
             
             <dt>readonly attribute ArrayBuffer certificate</dt>
