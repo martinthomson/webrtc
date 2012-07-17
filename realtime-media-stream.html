@@ -205,6 +205,7 @@ function receiveDescriptionFromSignaling(remoteDescription) {
           Change the underlying transport that is being used for the stream.  Optionally, set a different transport for the RTCP feedback for the stream.  If the <code>rtcpTransport</code> parameter is omitted or the same as the <code>transport</code>, then RTCP multiplexing with RTP [[!RFC5761]] is used.
         </dd>
       </dl>
+
       <section>
         <h3>The <code>LocalRealtimeMediaStream</code> Object</h3>
         <p>
@@ -222,13 +223,10 @@ function receiveDescriptionFromSignaling(remoteDescription) {
           <dd>
             Causes the encoding of the stream and the corresponding creation of packets to be temporarily suspended.
           </dd>
-          <dt>attribute EventHandler? onplay</dt>
+          <dt>readonly attribute boolean playing</dt>
           <dd>
-            Called when playing commences, as requested by <code><a href="#widl-RealtimeMediaStream-play-void">play</a>()</code>.
-          </dd>
-          <dt>attribute EventHandler? onpause</dt>
-          <dd>
-            Called when playing of the stream pauses, as requested by <code><a href="#widl-RealtimeMediaStream-play-void">play</a>()</code>.
+            <p>This value is <code>true</code> if the stream is playing.  A playing stream generates packets on the transport if the transport is open.</p>
+            <p class="note">This value can be true if the underlying <code>RealtimeTransport</code> is currently closed.</p>
           </dd>
         </dl>
       </section>
@@ -274,11 +272,15 @@ function receiveDescriptionFromSignaling(remoteDescription) {
       <dl title="[Constructor (optional (MediaStreamTrack or RealtimeMediaDescriptionDictionary or RealtimeMediaDescriptionConstraints) constraints)] interface RealtimeMediaDescription" class="idl">
         <dt>readonly attribute sequence&lt;RtpStreamDescription> streams</dt>
         <dd>
-          A description of the RTP streams that comprise the real-time stream.  Most codecs only support a single RTP stream.  Only layered codecs such as H.264 SVC [[!RFC6190]] are encoded into multiple streams.
+          A description of the RTP streams that comprise the real-time stream.  Most codecs only support a single RTP stream.  Only layered codecs such as H.264 SVC [[!RFC6190]] are encoded into multiple streams.  Streams are ordered with dependent streams coming after the streams they depend on.
         </dd>
         <dt>readonly attribute DOMString cname</dt>
         <dd>
           The RTCP Canonical Name (CNAME) used to identify this browser as a source of media in RTCP.  As described in [[I-D.rtcweb-rtp-usage]], the browser generates a short-term CNAME that cannot be linked to its identity over time.
+        </dd>
+        <dt>readonly attribute sequence&lt;RtpExtension>? rtpExceptions</dt>
+        <dd>
+          The set of RTP extensions [[!RFC5285]] that are used by the described stream(s).  Omission of the attribute (a null value) indicates that extensions are not supported, an empty set indicates that extensions are supported but ignored.
         </dd>
         <dt>readonly attribute sequence&lt;RtcpFeature> rtcpFeatures</dt>
         <dd>
@@ -287,6 +289,10 @@ function receiveDescriptionFromSignaling(remoteDescription) {
         <dt>readonly attribute sequence&lt;CodecDescription> codecs</dt>
         <dd>
           A description of the set of codecs that are used by the described stream(s).
+        </dd>
+        <dt>readonly attribute byte? priority</dt>
+        <dd>
+          The relative priority of the stream.  1 is highest, 3 is the default and the lowest.  This determines how the browser prioritizes this stream against other streams when there is limited available bandwidth as well as how the stream is marked on the network.
         </dd>
         <dt>RealtimeMediaDesctiption update (RealtimeMediaDescriptionDictionary constraints)</dt>
         <dd>
@@ -316,6 +322,10 @@ function receiveDescriptionFromSignaling(remoteDescription) {
           <dd>
             The RTCP Canonical Name (CNAME) used to identify this browser as a source of media in RTCP.
           </dd>
+          <dt>sequence&lt;RtpExtension>? rtpExceptions = null</dt>
+          <dd>
+            The set of RTP extensions that are used by the described stream(s).  Omission of the attribute indicates that extensions are not supported, an empty set indicates that extensions are supported but ignored.
+          </dd>
           <dt>sequence&lt;RtcpFeature> rtcpFeatures</dt>
           <dd>
             The set of RTCP features that are used by the described stream(s).
@@ -323,6 +333,10 @@ function receiveDescriptionFromSignaling(remoteDescription) {
           <dt>sequence&lt;CodecDescription> codecs</dt>
           <dd>
             A description of the set of codecs that are used by the described stream(s).
+          </dd>
+          <dt>byte? priority</dt>
+          <dd>
+            The relative priority of the stream.
           </dd>
         </dl>
       </section>
@@ -335,7 +349,7 @@ function receiveDescriptionFromSignaling(remoteDescription) {
         <dl title="dictionary RtpStreamDescription" class="idl">
           <dt>unsigned int ssrc</dt>
           <dd>
-            Each RTP stream has a unique, 32-bit synchronization source (SSRC).  This value is used to identify a single stream in an RTP session.  The browser allocates a new, random SSRC from the set of available SSRC values for each stream, though this value MAY be overridden by the application.  The browser MAY alter this value if it detects an SSRC collision within the RTP session.
+            Each RTP stream has a unique, 32-bit synchronization source (SSRC).  This value is used to identify a single stream in an RTP session.  The browser allocates a new, random SSRC from the set of available SSRC values for each stream, though this value can be overridden by the application.  The browser MAY alter this value if it detects an SSRC collision within the RTP session.
           </dd>
           <dt>unsigned long bandwidth?</dt>
           <dd>
@@ -345,13 +359,40 @@ function receiveDescriptionFromSignaling(remoteDescription) {
       </section>
 
       <section>
+        <h3>The <code>RtpExtension</code> Object</h3>
+        <p>
+          RTP Extensions [[!RFC5285]] enables the addition of extension information to the RTP header.  This enumeration identifies specific extensions that might be enabled.  A set of these values may be used to describe each real-time stream.  Omitting the set indicates that header extensions cannot be used on the stream.
+        </p>
+        <pre class="pseudoidl">
+enum <span class="idlInterfaceID"><a id="widl-RtpExtension">RtpExtension</a></span> {
+    "<a href="#widl-RtpExtension-rapid-sync">rapid-sync</a>", "<a href="#widl-RtpExtension-c2m-alevel">c2m-alevel</a>", "<a href="#widl-RtpExtension-m2c-alevel">m2c-alevel</a>"
+};
+        </pre>
+        <!-- <dl title="[NoInterfaceObject] enum TurnRelayTransport" class="enum" data-transform="transformEnum">-->
+        <dl class="attributes">
+          <dt id="widl-RtpExtension-rapid-sync"><code>rapid-sync</code></dt>
+          <dd>
+            The RTP extension that enables rapid synchronization [[!RFC6051]].
+          </dd>
+          <dt id="widl-RtpExtension-c2m-alevel"><code>c2m-alevel</code></dt>
+          <dd>
+            The client-to-mixer audio level extension [[!RFC6464]] with mandatory header encryption.
+          </dd>
+          <dt id="widl-RtpExtension-m2c-alevel"><code>m2c-alevel</code></dt>
+          <dd>
+            The mixer-to-client audio level extension [[!RFC6465]] with mandatory header encryption.
+          </dd>
+        </dl>
+       </section>
+
+     <section>
         <h3>The <code>RtcpFeature</code> Object</h3>
         <p>
-          The real-time feedback channel provided by RTCP [[!RFC3550]] supports a number of optional features.  This enumeration identifies a specific features.  An array of these values are used to describe each real-time stream.
+          The real-time feedback channel provided by RTCP [[!RFC3550]] supports a number of optional features.  This enumeration identifies specific features.  A set of these values are used to describe each real-time stream.
         </p>
           <pre class="pseudoidl">
 enum <span class="idlInterfaceID"><a id="widl-RtcpFeature">RtcpFeature</a></span> {
-    "<a href="#widl-RtcpFeature-avpf">avpf</a>", "<a href="#widl-RtcpFeature-nack">nack</a>", "<a href="#widl-RtcpFeature-pli">pli</a>", "<a href="#widl-RtcpFeature-sli">sli</a>", "<a href="#widl-RtcpFeature-rpsi">rpsi</a>", "<a href="#widl-RtcpFeature-reduced">reduced</a>", "<a href="#widl-RtcpFeature-rtx">rtx</a>", "<a href="#widl-RtcpFeature-fir">fir</a>", "<a href="#widl-RtcpFeature-tmmbr">tmmbr</a>"
+    "<a href="#widl-RtcpFeature-avpf">avpf</a>", "<a href="#widl-RtcpFeature-nack">nack</a>", "<a href="#widl-RtcpFeature-pli">pli</a>", "<a href="#widl-RtcpFeature-sli">sli</a>", "<a href="#widl-RtcpFeature-rpsi">rpsi</a>", "<a href="#widl-RtcpFeature-reduced">reduced</a>", "<a href="#widl-RtcpFeature-rtx">rtx</a>", "<a href="#widl-RtcpFeature-fir">fir</a>", "<a href="#widl-RtcpFeature-tmmbr">tmmbr</a>", "<a href="#widl-RtcpFeature-tstr">tstr</a>"
 };
           </pre>
           <!-- <dl title="[NoInterfaceObject] enum TurnRelayTransport" class="enum" data-transform="transformEnum">-->
@@ -393,6 +434,10 @@ enum <span class="idlInterfaceID"><a id="widl-RtcpFeature">RtcpFeature</a></span
             <dt id="widl-RtcpFeature-tmmbr"><code>tmmbr</code></dt>
             <dd>
               Temporary maximum media stream bit rate request (TMMBR) [[!RFC5104]].
+            </dd>
+            <dt id="widl-RtcpFeature-tstr"><code>tstr</code></dt>
+            <dd>
+              Temporal-spatial trade-off (TSTR) [[!RFC5104]].
             </dd>
           </dl>
       </section>

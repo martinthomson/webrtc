@@ -813,11 +813,11 @@ enum <span class="idlInterfaceID"><a id="widl-TurnRelayTransport">TurnRelayTrans
           <dd>
             The mode used for the transport.
           </dd>
-          <dt>SrtpSecurityDescription? outboundSdes</dt>
+          <dt>SrtpSecurityDescription outboundSdes</dt>
           <dd>
             A description of the security parameters for outbound streams of RTP media secured with SRTP [[!RFC3711]].  Used only when SRTP keys are negotiated through signaling.
           </dd>
-          <dt>SrtpSecurityDescription? inboundSdes</dt>
+          <dt>SrtpSecurityDescription inboundSdes</dt>
           <dd>
             A description of the security parameters for inbound streams of RTP media secured with SRTP [[!RFC3711]].  Used only when SRTP keys are negotiated through signaling.
           </dd>
@@ -825,9 +825,13 @@ enum <span class="idlInterfaceID"><a id="widl-TurnRelayTransport">TurnRelayTrans
           <dd>
             The role that the local browser takes in the DTLS [[!RFC5764]] handshake, either 'client' or 'server'.
           </dd>
-          <dt>CertificateValidationCallback? validate</dt>
+          <dt>CertificateValidationCallback validate</dt>
           <dd>
             This callback is triggered when the certificate for the remote peer is received.  This allows the application to accept or reject a peer based on the proffered certificate.  This is only valid for a DTLS transport.  When omitted, the certificates is automatically accepted.
+          </dd>
+          <dt>sequence&lt;DOMString> cipherSuites</dt>
+          <dd>
+            A set of DTLS cipher suites that can be negotiated for DTLS, using the <q>Description</q> from the <a href="http://www.iana.org/assignments/tls-parameters/tls-parameters.xml#tls-parameters-3">TLS cipher suite registry</a>.  The browser cannot negotiate any suite that is not included in this set.
           </dd>
         </dl>
         <section>
