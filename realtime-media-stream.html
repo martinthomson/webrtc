@@ -292,7 +292,7 @@ function receiveDescriptionFromSignaling(remoteDescription) {
         </dd>
         <dt>readonly attribute byte? priority</dt>
         <dd>
-          The relative priority of the stream.  1 is highest, 3 is the default and the lowest.  This determines how the browser prioritizes this stream against other streams when there is limited available bandwidth as well as how the stream is marked on the network.
+          The relative priority of the stream.  1 is highest, 3 is the lowest and the default.  This determines how the browser prioritizes this stream against other streams when there is limited available bandwidth as well as how the stream is marked on the network.
         </dd>
         <dt>RealtimeMediaDesctiption update (RealtimeMediaDescriptionDictionary constraints)</dt>
         <dd>
@@ -353,7 +353,7 @@ function receiveDescriptionFromSignaling(remoteDescription) {
           </dd>
           <dt>unsigned long bandwidth?</dt>
           <dd>
-            The maximum bandwidth, in bits per second, allowed for this stream.  This instructs the browser to constrain the stream to fit within this limit.  The browser is able to choose the method it uses to meet this constraint, which might include 
+            The maximum bandwidth, in bits per second, allowed for this stream.  This instructs the browser to constrain the stream to fit within this limit.  The browser is able to choose the method it uses to meet this constraint.
           </dd>
         </dl>
       </section>
