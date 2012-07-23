@@ -639,8 +639,9 @@ enum <span class="idlInterfaceID"><a id="widl-RtcpFeature">RtcpFeature</a></span
       <pre class="example">
     function receivePeerCandidates(remotePorts) {
         var candidatePairs = localCandidates.forEach(function(local) {
+            local.addEventListener('checksuccess', checkSuccessCallback);
             return remotePorts.forEach(function(remote) {
-                local.check(remote, checkCallback(local, remote));
+                local.check(remote);
             });
         });
     }
@@ -649,7 +650,9 @@ enum <span class="idlInterfaceID"><a id="widl-RtcpFeature">RtcpFeature</a></span
         Of the successful connectivity checks, one or more pairs are selected.  A <code><a>RealtimeTransport</a></code> is then created from the pair of ports.
       </p>
       <pre class="example">
-    function connectivityCheckSuccess(local, remote) {
+    function checkSuccessCallback(event) {
+        var local = event.target;
+        var remote = event.remote;
         RealtimeTransport.createTransport(local, remote, options, function(err, transport) {
             realtimeTransport = transport;
         });
