@@ -1097,7 +1097,7 @@ enum <span class="idlInterfaceID"><a id="widl-TurnRelayTransport">TurnRelayTrans
             The <code><dfn>StunAttribute</dfn></code> dictionary contains a single STUN attribute.
           </p>
           <dl title="dictionary StunAttribute" class="idl">
-            <dt>byte value</dt>
+            <dt>unsigned short type</dt>
             <dd>
               The type of the STUN attribute, see <a href="http://www.iana.org/assignments/stun-parameters/stun-parameters.xml#stun-parameters-3">the IANA STUN Attributes registry</a> for a listing of standard values.
             </dd>
@@ -1230,6 +1230,14 @@ enum <span class="idlInterfaceID"><a id="widl-TurnRelayTransport">TurnRelayTrans
           <dt>attribute EventHandler? onbandwidthchange</dt>
           <dd>
             This event callback is fired when the browser learns of a change in available bandwidth on the transport.  The browser MAY limit the rate of notifications, or suppress notification for small (10% or less) changes in available bandwidth.
+          </dd>
+          <dt>attribute unsigned long? inactivityInterval</dt>
+          <dd>
+            This attribute can be set to determine when the <code>oninactive</code> event is fired.
+          </dd>
+          <dt>attribute EventHandler? oninactive</dt>
+          <dd>
+            This event is fired when the transport has been inactive for <code>inactivityInterval</code> milliseconds.  That is, the time since the last packet was received from the peer exceeds the specified time.
           </dd>
         </dl>
       </section>
