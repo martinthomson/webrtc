@@ -1,13 +1,8 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>Real-Time Media API</title>
+    <title>Customizable, Ubiquitous Real-Time Communication over the Web</title>
     <meta http-equiv='Content-Type' content='text/html;charset=utf-8'/>
-    <!-- 
-         === NOTA BENE ===
-         For the three scripts below, if your spec resides on dev.w3 you can check them
-         out in the same tree and use relative links so that they'll work offline,
-      -->
     <script src="http://www.w3.org/Tools/respec/respec-w3c-common" class="remove"></script>
     <script class="remove">
       var respecConfig = {
@@ -56,6 +51,8 @@
 
       authors:  [
       { name: "Bernard Aboba", url: "mailto:bernard_aboba@hotmail.com",
+        company: "Microsoft", companyURL: "http://microsoft.com/" },
+      { name: "Matthew Kaufman", url: "mailto:matthew.kaufman@skype.net",
         company: "Microsoft", companyURL: "http://microsoft.com/" }
       ],
       
@@ -196,7 +193,7 @@ navigator.getUserMedia({ audio: true }, function(media) {
       <pre class="example">
 function receiveDescriptionFromSignaling(remoteDescription) {
     var description = new RealtimeMediaDescription(remoteDescription);
-    var remoteRtStream = description.createStream(realtimeTransport);
+    var remoteRtStream = new RemoteRealtimeMediaStream(description, realtimeTransport);
     var remoteMedia = new MediaStream(remoteRtStream.track);
     outputTag.src = URL.createObjectURL(remoteMedia);
 });
@@ -239,6 +236,23 @@ function receiveDescriptionFromSignaling(remoteDescription) {
         <dd>
           Change the underlying transport that is being used for the stream.  Optionally, set a different transport for the RTCP feedback for the stream.  If the <code>rtcpTransport</code> parameter is omitted or the same as the <code>transport</code>, then RTCP multiplexing with RTP [[!RFC5761]] is used.
         </dd>
+        <dt>void play()</dt>
+        <dd>
+          Causes the encoding of the stream and the corresponding creation of packets to be resumed.
+        </dd>
+        <dt>void pause()</dt>
+        <dd>
+          Causes the encoding of the stream and the corresponding creation of packets to be temporarily suspended.
+        </dd>
+        <dt>void stop()</dt>
+        <dd>
+          Halts the encoding of the stream and closes the stream.  The stream cannot be used after this.
+        </dd>
+        <dt>readonly attribute boolean playing</dt>
+        <dd>
+          <p>This value is <code>true</code> if the stream is playing.  A playing stream generates packets on the transport if the transport is open.</p>
+          <p class="note">This value can be true if the underlying <code>RealtimeTransport</code> is currently closed.</p>
+        </dd>
       </dl>
 
       <section>
@@ -250,19 +264,6 @@ function receiveDescriptionFromSignaling(remoteDescription) {
           The constructor for <code>LocalRealtimeMediaStream</code> ignores any information in the <code>RealtimeMediaDescription</code> that it is passed that is not applicable to the provided track.
         </p>
         <dl title="[Constructor(MediaStreamTrack track, RealtimeMediaDescription description, RealtimeTransport transport, optional RealtimeTransport rtcpTransport)] interface LocalRealtimeMediaStream : RealtimeMediaStream" class="idl">
-          <dt>void play()</dt>
-          <dd>
-            Causes the encoding of the stream and the corresponding creation of packets to be resumed.
-          </dd>
-          <dt>void pause()</dt>
-          <dd>
-            Causes the encoding of the stream and the corresponding creation of packets to be temporarily suspended.
-          </dd>
-          <dt>readonly attribute boolean playing</dt>
-          <dd>
-            <p>This value is <code>true</code> if the stream is playing.  A playing stream generates packets on the transport if the transport is open.</p>
-            <p class="note">This value can be true if the underlying <code>RealtimeTransport</code> is currently closed.</p>
-          </dd>
         </dl>
       </section>
 
@@ -299,10 +300,10 @@ function receiveDescriptionFromSignaling(remoteDescription) {
     <section>
       <h2>The <code>RealtimeMediaDescription</code> Object</h2>
       <p>
-        A <code>RealtimeMediaDescription</code> is the basic means of specifying what a packetized stream of media looks like.  A <code>RealtimeMediaDescription</code> is used to specify what an outgoing stream is to look like and to describe what an incoming stream looks like.
+        A <code><dfn>RealtimeMediaDescription</dfn></code> is the basic means of specifying what a packetized stream of media looks like.  A <code>RealtimeMediaDescription</code> is used to specify what an outgoing stream is to look like and to describe what an incoming stream looks like.
       </p>
       <p>
-        Specific sub-classes are used for describing outbound and inbound streams, though the basic parameters are common.
+        <code>RealtimeMediaDescription</code> provides a basic form of media negotiation through the <code href="#widl-RealtimeMediaDescription-update-RealtimeMediaDescription-RealtimeMediaDescriptionDictionary-constraints">update()</code> method.
       </p>
       <dl title="[Constructor (optional (MediaStreamTrack or RealtimeMediaDescriptionDictionary or RealtimeMediaDescriptionConstraints) constraints)] interface RealtimeMediaDescription" class="idl">
         <dt>readonly attribute sequence&lt;RtpStreamDescription> streams</dt>
@@ -313,7 +314,7 @@ function receiveDescriptionFromSignaling(remoteDescription) {
         <dd>
           The RTCP Canonical Name (CNAME) used to identify this browser as a source of media in RTCP.  As described in [[I-D.rtcweb-rtp-usage]], the browser generates a short-term CNAME that cannot be linked to its identity over time.
         </dd>
-        <dt>readonly attribute sequence&lt;RtpExtension>? rtpExceptions</dt>
+        <dt>readonly attribute sequence&lt;RtpExtension>? rtpExtensions</dt>
         <dd>
           The set of RTP extensions [[!RFC5285]] that are used by the described stream(s).  Omission of the attribute (a null value) indicates that extensions are not supported, an empty set indicates that extensions are supported but ignored.
         </dd>
@@ -329,7 +330,7 @@ function receiveDescriptionFromSignaling(remoteDescription) {
         <dd>
           The relative priority of the stream.  1 is highest, 3 is the lowest and the default.  This determines how the browser prioritizes this stream against other streams when there is limited available bandwidth as well as how the stream is marked on the network.
         </dd>
-        <dt>RealtimeMediaDesctiption update (RealtimeMediaDescriptionDictionary constraints)</dt>
+        <dt>RealtimeMediaDescription update (RealtimeMediaDescriptionDictionary constraints)</dt>
         <dd>
           Update the description to include only those settings that are specified in the provided dictionary.  This can be used as a basis for negotiating a common set of capabilities between peers.  This throws an <code>Error</code> if the resulting description cannot possibly be used to describe any real-time stream because the constraints are incompatible with the current state of the description.
         </dd>
@@ -369,7 +370,7 @@ function receiveDescriptionFromSignaling(remoteDescription) {
           <dd>
             A description of the set of codecs that are used by the described stream(s).
           </dd>
-          <dt>byte? priority</dt>
+          <dt>byte priority = 3</dt>
           <dd>
             The relative priority of the stream.
           </dd>
@@ -498,16 +499,25 @@ enum <span class="idlInterfaceID"><a id="widl-RtcpFeature">RtcpFeature</a></span
           <dd>
             The clock rate for this codec description, specified in Hertz.
           </dd>
+          <dt>unsigned short? ptime</dt>
+          <dd>
+            The packet time for this particular codec.  Used to specify the packet time where a choice exists.
+          </dd>
+          <dt>unsigned short? maxPtime</dt>
+          <dd>
+            The maximum packet time for this particular codec.  Used for codecs with a variable packet time.
+          </dd>
           <dt>boolean silenceSuppression = true</dt>
           <dd>
             For audio codecs that support silence suppression, this value determines if the codec is permitted to perform silence suppression.
           </dd>
-          <dt>DOMString fmtp</dt>
+          <dt>DOMString fmtp = ""</dt>
           <dd>
             Format-specific parameters for the codec, taken from the SDP definition for the codec.
           </dd>
         </dl>
       </section>
+
       <section>
         <h3>The <code>RealtimeMediaDescriptionConstraints</code> Object</h3>
         <p>
@@ -534,17 +544,9 @@ enum <span class="idlInterfaceID"><a id="widl-RtcpFeature">RtcpFeature</a></span
       </section>
     </section>
     
-    <section id='abstract'>
-      <p>
-        This document describes how transport flows can be created in a browser. A transport flow is a construct that allows for bidirectional exchange of UDP packets. Chances are, these transport flows will be established between browsers.
-      </p>
-      <p>
-        The flow of packets is encrypted and&mdash;depending on the selected protocol&mdash;the browser is able to ensure that the recipient is willing to receive the flow. Setup is mediated by the web application.
-      </p>
-    </section>
 
     <section id="transport">
-      <h2>Real-Time Transport</h2>
+      <h2>Real-Time Transport Layer</h2>
       <p>
         Establishing flows of real-time media to and from browsers requires a transport that is suited to this purpose.  This document describes how real-time transport flows can be created in a browser. A real-time transport flow is a construct that allows for bidirectional exchange of UDP packets.
       </p>
@@ -554,89 +556,90 @@ enum <span class="idlInterfaceID"><a id="widl-RtcpFeature">RtcpFeature</a></span
       <p>Establishing flows of UDP through middleboxes such as Network Address Translators (NAT) or firewalls requires the use of techniques such as Interactive Connectivity Establishment (ICE) [[!RFC5245]].  The provided API describes primitives that enable the implementation of ICE, but do not require it other than requiring the consent mechanisms that it provides, which is critical to the security of the web.
       </p>
       <p>
-        This API only deals with the creation of a secured transport between peers.  Sending media using this API is described in another document.
+        This API only deals with the creation of a secured transport between peers.
       </p>
 
       <section>
-        <h3>Design Goals</h3>
+        <h3>Real-Time Transport with <code>RealtimeTransportBuilder</code></h3>
         <p>
-          It is possible to achieve the basic goals in a number of ways.  This design attempts to provide the maximum flexibility in the API, with minimal complexity.
+          The <code><a>RealtimeTransportBuilder</a></code> provides a simple interface for the creation of peer-to-peer real-time transport.
         </p>
         <p>
-          To that end, the API ensures that the browser contains as little of the implementation of the transport establishment code as possible.  This provides the using application more control over application logic.
+          Operation of the <code><a>RealtimeTransportBuilder</a></code> is straightforward.  The constructor accepts the options that include the <code><a>RealtimeTransportOptions</a></code> used to construct a <code><a>RealtimeTransport</a></code>.  After calling <code>start()</code>, the transport builder produces events when ICE candidates (<code>RealtimePort</code>s) are gathered, and when a transport is successfully created.  The following example illustrates its use.
         </p>
-        <p>
-          This API also reduces the amount of application state that the browser maintains.  This reduces the coupling of browser and application implementations, simplifies API interactions, gives applications greater control over browser behavior and enables the creation of more robust applications.  For example, a browser with less accumulated state can recover necessary state faster in the event of a reload than otherwise.
-        </p>
+        <pre class="example">
+var options = { transport: transportOptions, stun: stunServer };
+var builder = new RealtimeTransportBuilder(options);
+builder.onport = function(e) {
+    signaling.send('port', e.port);
+};
+signaling.onport = function(port) {
+    builder.addRemote(port);
+};
+builder.onconnect = function(e) {
+    e.target.stop();
+    gotTransport(e.transport);  // at which point streams can be added, etc...
+};
+builder.start();
+        </pre>
       </section>
-
+      
       <section>
-        <h3>Non-Goals</h3>
+        <h3>Real-Time Transport without <code>RealtimeTransportBuilder</code></h3>
         <p>
-          It is not a goal of this API to provide an application with the ability to create minimal realtme applications.  Browser APIs rarely change once deployed, which means that a constraint imposed by an API is difficult to remove.  In complete contrast, applications on the web are able to evolve rapidly.  Moving the bulk of the necessary logic to application code ensures greater scope for innovation.  A simple set of basic primitives are better enablers.
+          Advanced uses of the transport API can establishing real-time media transport by interacting with the following two objects:
+          <ul>
+            <li>
+              The <code><a>RealtimePort</a></code> is the end point for a real-time transport.  This represents a UDP port, opened by the browser.  The RealtimePort encapsulates the functions necessary to perform an ICE negotiation [[!RFC5245]].  In ICE terms, a <code><a>RealtimePort</a></code> is a local candidate.
+            </li>
+            <li>
+              The <code><a>RealtimeTransport</a></code> is a peer-to-peer bearer for secured media.  It binds a local <code><a>RealtimePort</a></code> to a remote <code><a>RealtimePort</a></code> and enables the bidirectional exchange of media packets.
+            </li>
+          </ul>
         </p>
-
         <p>
-          The successful creation of RTP streams requires signaling.  Subjecting that signaling to standardization would constrain how it manifests, limiting the flexibility of applications that use these APIs.
+          In order to establish a transport between a local peer and remote peer, the following process is applied:
+          <ol>
+            <li>
+              The local peer opens one or more real-time ports.
+            </li>
+            <li>
+              The local peer then has to learn of the ports that its remote peer has opened.  This uses a signaling channel specific to the application.  For instance, a web application could use previously HTTP requests or Websockets connections for this purpose.
+            </li>
+            <li>
+              A testing process is used to find a local and remote port pair (a candidate pair) that can exchange UDP packets.  One or more connectivity checks are made from different local ports toward different remote ports.  A successful connectivity check indicates that packets can reach the peer and that the peer consents to receive packets.  
+            </li>
+            <li>
+              Finally, a real-time transport is established on the pair of ports.  A security context is established so that secured media packets are able to flow in both directions between peers.  <code><a>RealtimeMediaStream</code>s can then be added to the transport.
+            </li>
+          </ol>
         </p>
-      </section>
-
-    <section>
-      <h3>Real-Time Transport Usage</h3>
-      <p>
-        Establishing real-time media transport requires the interaction of two objects:
-        <ul>
-          <li>
-            The <code><a>RealtimePort</a></code> is the end point for a real-time transport.  This represents a UDP port, opened by the browser.  The RealtimePort encapsulates the functions necessary to perform an ICE negotiation [[!RFC5245]].  In ICE terms, a <code><a>RealtimePort</a></code> is a local candidate.
-          </li>
-          <li>
-            The <code><a>RealtimeTransport</a></code> is a peer-to-peer bearer for secured media.  It binds a local <code><a>RealtimePort</a></code> to a remote <code><a>RealtimePort</a></code> and enables the bidirectional exchange of media packets.
-          </li>
-        </ul>
-      </p>
-      <p>
-        In order to establish a transport between a local peer and remote peer, the following process is applied:
-        <ol>
-          <li>
-            The local peer opens one or more real-time ports.
-          </li>
-          <li>
-            The local peer then has to learn of the ports that its remote peer has opened.  This uses a signaling channel specific to the application.  For instance, a web application could use previously HTTP requests or Websockets connections for this purpose.
-          </li>
-          <li>
-            A process of discovery is used to find a local and remote port pair (a candidate pair) that can exchange UDP packets.  One or more connectivity checks are made from different local ports toward different remote ports.  A successful connectivity check indicates that packets can reach the peer and that the peer consents to receive packets.  
-          </li>
-          <li>
-            Finally, a real-time transport is established on the pair of ports.  A security context is established so that secured media packets are able to flow in both directions between peers.  Real-Time media streams can then be added to the transport.
-          </li>
-        </ol>
-      </p>
-      <p>
-        In the first step of this scenario one or more <code><a>RealtimePort</a></code> objects are created in different ways.  The browser allocates a local UDP port on each of the available network interfaces and returns these to the application.
-      </p>
-      <pre class="example">
+        <p>
+          In the first step of this scenario one or more <code><a>RealtimePort</a></code> objects are created in different ways.  The browser allocates a local UDP port on each of the available network interfaces and returns these to the application.
+        </p>
+        <pre class="example">
     RealtimePort.openLocalPorts(function(ports) {
         signalingChannel.send('candidates', ports);
         localCandidates.push(ports);
     });
-      </pre>
-      <p>
-        Each real-time port consists of an IP address, a port number, a username fragment and password.  This information is exchanged with the remote peer using whatever signaling mechanism is chosen by the application.
-      </p>
-      <p>
-        Other forms of real-time port might be necessary for successful traversal of middleboxes like firewalls and NATs.  For instance, a relay port (i.e., relay candidate) uses a relay server to forward packets.  Because the relay server is publically reachable, many of the concerns with middlebox traversal do not apply to it, enabling communication in more challenging network conditions.
-      </p>
-      <pre class="example">
+        </pre>
+        <p>
+          Each real-time port consists of an IP address, a port number, a username fragment, a password and a priority.  This information is exchanged with the remote peer using whatever signaling mechanism is chosen by the application.
+        </p>
+        <p>
+          Other forms of real-time port might be necessary for successful traversal of middleboxes like firewalls and NATs.  For instance, a relay port (i.e., relay candidate) uses a relay server to forward packets.  Because the relay server is publically reachable, many of the concerns with middlebox traversal do not apply to it, enabling communication in more challenging network conditions.
+        </p>
+        <pre class="example">
     RealtimePort.allocateRelay(relay, function(error, relayCandidates) {
         if (!error) {
             signalingChannel.send('candidate', relayCandidate);
         }
     });
-      </pre>
-      <p>
-        Local and remote real-time ports are paired and connectivity checking is used for each pair to determine which ports can be used for exchanging packets.
-      </p>
-      <pre class="example">
+        </pre>
+        <p>
+          Local and remote real-time ports are paired and connectivity checking is used for each pair to determine which ports can be used for exchanging packets.
+        </p>
+        <pre class="example">
     function receivePeerCandidates(remotePorts) {
         var candidatePairs = localCandidates.forEach(function(local) {
             local.addEventListener('checksuccess', checkSuccessCallback);
@@ -645,11 +648,11 @@ enum <span class="idlInterfaceID"><a id="widl-RtcpFeature">RtcpFeature</a></span
             });
         });
     }
-      </pre>
-      <p>
-        Of the successful connectivity checks, one or more pairs are selected.  A <code><a>RealtimeTransport</a></code> is then created from the pair of ports.
-      </p>
-      <pre class="example">
+        </pre>
+        <p>
+          Of the successful connectivity checks, one or more pairs are selected.  A <code><a>RealtimeTransport</a></code> is then created from the pair of ports.
+        </p>
+        <pre class="example">
     function checkSuccessCallback(event) {
         var local = event.target;
         var remote = event.remote;
@@ -657,11 +660,553 @@ enum <span class="idlInterfaceID"><a id="widl-RtcpFeature">RtcpFeature</a></span
             realtimeTransport = transport;
         });
     }
-      </pre>
-      <p>
-        The resulting transport object can be used to securely exchange media with the peer.
-      </p>
+        </pre>
+        <p>
+          The resulting transport object can be used to securely exchange media with the peer.
+        </p>
+      </section>
     </section>
+
+    <section id='builder'>
+      <h2>Real-Time Transport Builder</h2>
+      <p>
+        A real-time transport builder provides an application with an ICE implementation that produces a <code><a>RealtimeTransport</a></code> with minimal effort.  The <code><a>RealtimeTransportBuilder</a></code> uses the <code><a>RealtimePort</a></code> API, and provides a means for the application to inspect, control or interrupt the ongoing ICE setup.
+      </p>
+      <p>
+        Additional options for <code>RealtimeTransportBuilder</code> include optional STUN and TURN servers, plus control over whether this peer is in the ICE controlling or controlled role.
+      </p>
+
+      <section>
+        <h3>The <code>RealtimeTransportBuilder</code> Object</h3>
+        <p>
+          A <code><dfn>RealtimeTransportBuilder</dfn></code> is responsible for constructing a peer-to-peer transport using ICE.
+        </p>
+        <dl title="[Constructor(RealtimeTransportBuilderOptions options)] interface RealtimeTransportBuilder : EventTarget" class="idl">
+          <dt>readonly attribute sequence&lt;RealtimePort&gt; local</dt>
+          <dd>
+            The set of gathered <code>RealtimePort</code>s in priority order (highest priority first).  These ports can be interacted with directly.
+          </dd>
+          <dt>readonly attribute sequence&lt;RemoteRealtimePort&gt; remote</dt>
+          <dd>
+            The set of <code>RemoteRealtimePort</code>s provided to the <code>addRemote()</code> method, sorted in priority order.
+          </dd>
+          <dt>readonly attribute RealtimeTransport? transport</dt>
+          <dd>
+            The current active transport, if one has been successfully created.  This value will be <code>null</code> prior to the successful completion of processing.
+          </dd>
+          <dt>void start()</dt>
+          <dd>
+            <p>Starts or restarts the transport builder.  The transport builder will perform the ICE process as though for a single component.</p>
+            <p>It is possible invoke this method multiple times, where each subsequent invocation triggers a restart of ICE processing.  While running, the builder will automatically restart the process if it detects network events that necessitate a restart.
+          </dd>
+          <dt>void stop()</dt>
+          <dd>
+            Stops the transport builder.  Any ports or transports that may have been opened while the builder was running remain open and can continue to be used.
+          </dd>
+          <dt>void closeAll()</dt>
+          <dd>
+            Stops the builder and closes all ports and transports that may have been created.
+          </dd>
+          <dt>[TreatNonCallableAsNull] attribute RealtimeTransportConnectEventHandler? onconnect</dt>
+          <dd>
+            The <code>connect</code> event is fired when a transport is successfully created.  This event could fire multiple times during the operation of the transport builder if a transport with a higher priority is selected, or network changes cause the current transport to fail.
+          </dd>
+          <dt>[TreatNonCallableAsNull] attribute RealtimePortEventHandler? onport</dt>
+          <dd>
+            The <code>port</code> event is fired when a local port is gathered.
+          </dd>
+          <dt>attribute EventHandler onerror</dt>
+          <dd>
+            The <code>error</code> is fired by a transport builder when no candidates can be gathered or when transport creation fails.
+          </dd>
+        </dl>
+        
+        <section>
+          <h4>The <code>RealtimeTransportBuilderOptions</code> Dictionary</h4>
+          <p>
+            A <code><dfn>RealtimeTransportBuilderOptions</dfn></code> contains all the information necessary to establish a peer-to-peer transport using <code>RealtimeTransportBuilder</code>.  All values, except <code>transport</code> are optional.
+          </p>
+          <dl title="dictionary RealtimeTransportOptions" class="idl">
+            <dt>RealtimeTransportOptions transport</dt>
+            <dd>
+              Options to use in the creation of a <code><a>RealtimeTransport</a></code>.
+            </dd>
+            <dt>RemoteRealtimePort stun = null</dt>
+            <dd>
+              A STUN server from which to collect server reflexive addresses.
+            </dd>
+            <dt>RemoteRealtimePort turn = null</dt>
+            <dd>
+              A TURN server from which to allocate relay ports.
+            </dd>
+            <dt>boolean controlling = false</dt>
+            <dd>
+              This options is set to true if this peer should assume that it is acting in the ICE controlling role.  ICE role conflict resolution is used to ensure that a misunderstanding about role does not prevent a transport from being established.
+            </dd>
+            <dt>long roundTrip = 500</dt>
+            <dd>
+              An initial estimate of the round trip time between the peers, in milliseconds.  This value sets the ICE RTO.  The final RTO value will be adjusted (but not below 100) based on the observed round trip time.
+            </dd>
+            <dt>long maxChecks = 5</dt>
+            <dd>
+              The maximum number of checks to generate for each port (or candidate) pair before considering a connectivity check transaction to have failed.
+            </dd>
+            <dt>sequence&lt;StunAttribute&gt; attributes = []</dt>
+            <dd>
+              A set of additional STUN attributes to add to connectivity check requests that are made toward peers.
+            </dd>
+          </dl>
+        </section>
+
+        <section>
+          <h4>The <code>RealtimeTransportConnectEventHandler</code> Callback Function</h4>
+
+          <p>
+            This callback is invoked when a transport builder successfully creates a transport.
+          </p>
+          <pre class="pseudoidl">
+<span id="idl-def-RealtimeTransportConnectEventHandler" class="idlCallback">callback <span class="idlDictionaryID">RealtimeTransportConnectEventHandler</span> = void (<span class="idlParamType"><a class="idlType" href="#idl-def-RealtimeTransportConnectEvent">RealtimeTransportConnectEvent</a></span> <span class="idlParamName">event</span>);</span>
+          </pre>
+        </section>
+
+        <section>
+          <h4>The <code>RealtimeTransportConnectEvent</code> Interface</h4>
+
+          <p>
+            The <code><dfn>RealtimeTransportConnectEvent</dfn></code> event object passed to the <code>RealtimeTransportConnectEventHandler</code> includes the transport that was created.
+          </p>
+
+          <dl title="[Constructor(RealtimeTransportConnectEventInit)] interface RealtimeTransportConnectEvent : Event" class="idl">
+            <dt>attribute RealtimeTransport transport</dt>
+            <dd>
+              The <code><a>RealtimeTransport</a></code> that was connected by the transport builder.
+            </dd>
+          </dl>
+          <dl title="dictionary RealtimeTransportConnectEventInit : EventInit" class="idl">
+            <dt>attribute RealtimeTransport transport</dt>
+            <dd>
+            </dd>
+          </dl>
+        </section>
+
+        <section>
+          <h4>The <code>RealtimePortEventHandler</code> Callback Function</h4>
+
+          <p>
+            This callback is invoked when a transport builder opens, discovers or allocates a local port.
+          </p>
+          <pre class="pseudoidl">
+<span id="idl-def-RealtimePortEventHandler" class="idlCallback">callback <span class="idlDictionaryID">RealtimePortEventHandler</span> = void (<span class="idlParamType"><a class="idlType" href="#idl-def-RealtimePortEvent">RealtimePortEvent</a></span> <span class="idlParamName">event</span>);</span>
+          </pre>
+        </section>
+
+        <section>
+          <h4>The <code>RealtimePortEvent</code> Interface</h4>
+
+          <p>
+            The <code><dfn>RealtimePortEvent</dfn></code> event object passed to the <code>RealtimePortEventHandler</code> includes the port that was opened.
+          </p>
+
+          <dl title="[Constructor(RealtimePortEventInit)] interface RealtimePortEvent : Event" class="idl">
+            <dt>attribute RealtimePort port</dt>
+            <dd>
+              The <code><a>RealtimePort</a></code> that was opened, discovered, or allocated (i.e., gathered) by the transport builder.  This could be a <a href="allocateRelay">relayed</a> or reflexive candidate.  Relayed or reflexive candidates that include a specific base port implement the <code><a>DerivedRealtimePort</a></code> interface, which includes the <code>base</code> attribute.  Relayed ports that use transports other than UDP do not include <code>base</code> attribute.
+            </dd>
+          </dl>
+          <dl title="dictionary RealtimePortEventInit : EventInit" class="idl">
+            <dt>attribute RealtimePort port</dt>
+            <dd>
+            </dd>
+          </dl>
+        </section>
+
+        <section>
+          <h4>The <code>DerivedRealtimePort</code> Interface</h4>
+
+          <p>
+            The <code><dfn>DerivedRealtimePort</dfn></code> interface is used by the <code><a>RealtimeTransportBuilder</a></code> to provide information on the base for derived candidates.  This includes server reflexive, peer reflexive and UDP relay candidates.
+          </p>
+          <p>
+            Reflexive candidates that implement this interface do not provide any events relating to connectivity checking.  Connectivity checking events are provided on the corresponding base port.  Relayed ports provide a complete implementation.
+          </p>
+
+          <dl title="[NoInterfaceObject] interface DerivedRealtimePort" class="idl">
+            <dt>attribute RealtimePort base</dt>
+            <dd>
+              The <code><a>RealtimePort</a></code> that this object was derived from.  The <code>base</code> provides information necessary to distinguish unique candidates in some unusual network configurations.
+            </dd>
+          </dl>
+          <p><code>DerivedRealtimePort</code> implements <code><a>RealtimePort</a></code>:</p>
+          <pre class="pseudoidl">
+<span class="idlDictionaryID"><a>DerivedRealtimePort</a></span> implements <span class="idlDictionaryID"><a>RealtimePort</a></span>;
+          </pre>
+        </section>
+      </section>
+
+    </section>
+
+
+    <section>
+      <h2>Real-Time Transport</h2>
+      
+      <p>
+        A <code><dfn>RealtimeTransport</dfn></code> represents the flow of packets between a local and a remote real-time port.
+      </p>
+      <p>
+        Upon creation, a <code><a>RealtimeTransport</a></code> beings automatically generating connectivity checks toward the selected remote peer.  If a consent check fails, the transport remains open, but no packets can be sent.
+      </p>
+
+      <section>
+        <h3>The <code>RealtimeTransport</code> Object</h3>
+        <dl title="interface RealtimeTransport : EventTarget" class="idl">
+          <dt>static void createTransport (RealtimePort local, RemoteRealtimePort remote, TransportOptions options, TransportCallback callback)</dt>
+          <dd>
+            Factory method for creating a transport.
+          </dd>
+          
+          <dt>readonly attribute RealtimePort localPort</dt>
+          <dd>
+            The local real-time port that is used for this transport.
+          </dd>
+          <dt>readonly attribute RemoteRealtimePort remotePort</dt>
+          <dd>
+            The remote real-time port that is used for this transport.
+          </dd>
+          <dt>readonly attribute boolean dtls</dt>
+          <dd>
+            Whether key negotiation for the transport is being controlled using DTLS.
+          </dd>
+          <dt>readonly attribute RemoteCertificateInformation? remoteCertificate</dt>
+          <dd>
+            Information about the certificate offered by the remote peer.  This attribute is only set if the transport is using DTLS for key negotiation.
+          </dd>
+
+          <dt>readonly attribute SrtpSecurityDescription? outboundSdes</dt>
+          <dd>
+            The SRTP security description for outbound media.
+          </dd>
+          <dt>readonly attribute SrtpSecurityDescription? inboundSdes</dt>
+          <dd>
+            The SRTP security description for inbound media.
+          </dd>
+
+          <dt>readonly attribute boolean open</dt>
+          <dd>
+            Whether the transport is currently open and able to receive data.  Newly created transports always start with this value set to <code>true</code>.  Note that absence or expiry of consent from the remote peer can cause a transport to be unable to send on an open transport.
+          </dd>
+          <dt>readonly attribute unsigned long bandwidth</dt>
+          <dd>
+            The maximum available bandwidth on this transport, as detected by the browser.  This value can change over time.  Users of the transport operate within this envelope; packets that exceed this limit within any interval (browser-selected) are discarded.
+          </dd>
+          <dt>void close()</dt>
+          <dd>
+            This closes the transport.
+          </dd>
+          <dt>attribute EventHandler onclose</dt>
+          <dd>
+            The <code>close</code> event is fired when the transport is closed.
+          </dd>
+          <dt>readonly attribute boolean consent</dt>
+          <dd>
+            Whether the transport is currently open and able to send data.  This depends on there being a successful consent check toward the remote peer within a browser-configured period.  This valid is <code>false</code> when consent toward the remote peer has expired.
+          </dd>
+          <dt>attribute EventHandler onconsent</dt>
+          <dd>
+            This <code>consent</code> event is fired when consent checks toward the remote peer succeed after having failed.
+          </dd>
+          <dt>attribute EventHandler onconsentexpired</dt>
+          <dd>
+            The <code>consentexpired</code> event is fired when consent checks toward the remote peer time out and no packets are able to be sent on this transport.
+          </dd>
+          <dt>attribute EventHandler onbandwidthchange</dt>
+          <dd>
+            The <code>bandwidthchange</code> event is fired when the browser learns of a change in available bandwidth on the transport.  The browser MAY limit the rate of notifications, or suppress notification for small (10% or less) changes in available bandwidth.
+          </dd>
+          <dt>attribute unsigned long? inactivityInterval</dt>
+          <dd>
+            This attribute can be set to determine when the <code>oninactive</code> event is fired.
+          </dd>
+          <dt>attribute EventHandler oninactive</dt>
+          <dd>
+            The <code>inactive</code> event is fired when the transport has been inactive for <code>inactivityInterval</code> milliseconds.  That is, the time since the last packet was received from the peer exceeds the specified time.
+          </dd>
+          <dt>[TreatNonCallableAsNull] attribute UnknownSsrcEventHandler? onunknownssrc</dt>
+          <dd>
+            <p>
+              The <code>unknownssrc</code> event is fired when an RTP packet arrives on the transport without a corresponding <code><a>RealtimeMediaStream</a></code>.  Applications that do not signal SSRCs can use this event to recognize a new or changed SSRC and trigger the addition or modification of streams.  
+            </p>
+            <p>
+              The browser MUST buffer packets that arrive with the SSRC until all event handlers have returned or until a <code>RealtimeMediaStream</code> is created to accept the incoming data.  This allows an application to ensure that packets are not lost due to SSRC renumbering or absence of SSRC in signaling.
+            </p>
+          </dd>
+        </dl>
+      </section>
+
+      <section>
+        <h3>Transport Creation Options</h3>
+        <p>
+          Specifying <code><dfn>RealtimeTransportOptions</dfn></code> can be used to alter the characteristics of a transport.
+        </p>
+        <dl title="dictionary RealtimeTransportOptions" class="idl">
+          <dt>RealtimeTransportMode mode = "dtls-srtp"</dt>
+          <dd>
+            The mode used for the transport.
+          </dd>
+          <dt>SrtpSecurityDescription outboundSdes</dt>
+          <dd>
+            A description of the security parameters for outbound streams of RTP media secured with SRTP [[!RFC3711]].  Used only when SRTP keys are negotiated through signaling.
+          </dd>
+          <dt>SrtpSecurityDescription inboundSdes</dt>
+          <dd>
+            A description of the security parameters for inbound streams of RTP media secured with SRTP [[!RFC3711]].  Used only when SRTP keys are negotiated through signaling.
+          </dd>
+          <dt>DtlsRole? role</dt>
+          <dd>
+            The role that the local browser takes in the DTLS [[!RFC5764]] handshake, either 'client' or 'server'.
+          </dd>
+          <dt>CertificateValidationCallback validate</dt>
+          <dd>
+            This callback is triggered when the certificate for the remote peer is received.  This allows the application to accept or reject a peer based on the proffered certificate.  This is only valid for a DTLS transport.  When omitted, the certificates is automatically accepted.
+          </dd>
+          <dt>sequence&lt;DOMString> cipherSuites</dt>
+          <dd>
+            A set of DTLS cipher suites that can be negotiated for DTLS, using the <q>Description</q> from the <a href="http://www.iana.org/assignments/tls-parameters/tls-parameters.xml#tls-parameters-3">TLS cipher suite registry</a>.  The browser cannot negotiate any suite that is not included in this set.
+          </dd>
+        </dl>
+
+        <section>
+          <h4>Real-Time Transport Modes</h4>
+          <p>
+            </p>
+          <pre class="pseudoidl">
+enum <span class="idlInterfaceID"><a id="widl-RealtimeTransportMode">RealtimeTransportMode</a></span> {
+    "<a href="#widl-RealtimeTransportMode-srtp">srtp</a>", "<a href="#widl-RealtimeTransportMode-dtls-srtp">dtls-srtp</a>"
+};
+          </pre>
+          <!-- <dl title="enum DtlsRole" class="enum" data-transform="transformEnum">-->
+          <dl class="attributes">
+            <dt id="widl-RealtimeTransportMode-srtp"><code>srtp</code></dt>
+            <dd>
+              Instructs the browser to create a <code><a>RealtimeTransport</a></code> using SRTP.  When this option is chosen, the <code><a>RealtimeTransportOptions</a></code> MUST also include <code><a href="#widl-RealtimeTransportOptions-outboundSdes">outboundSdes</a></code> and <code><a href="#widl-RealtimeTransportOptions-inboundSdes">inboundSdes</a></code>.
+            </dd>
+            <dt id="widl-RealtimeTransportMode-dtls-srtp"><code>dtls-srtp</code></dt>
+            <dd>
+              Instructs the browser to create a <code><a>RealtimeTransport</a></code> using DTLS-SRTP [[!RFC5764]].  When this option is chosen, the <code><a>RealtimeTransportOptions</a></code> MUST also include <code><a href="#widl-RealtimeTransportOptions-role">role</a></code> and it SHOULD include <code><a href="#widl-RealtimeTransportOptions-validate">validate</a></code>.
+            </dd>
+          </dl>
+        </section>
+
+        <section>
+          <h4>DTLS Roles</h4>
+          <p>
+            DTLS Roles are applicable when creating a transport over DTLS.  This option determines whether the local browser is in the client or server role.
+          </p>
+          <pre class="pseudoidl">
+enum <span class="idlInterfaceID"><a id="widl-DtlsRole">DtlsRole</a></span> {
+    "<a href="#widl-DtlsRole-client">client</a>", "<a href="#widl-DtlsRole-server">server</a>"
+};
+          </pre>
+          <!-- <dl title="enum DtlsRole" class="enum" data-transform="transformEnum">-->
+          <dl class="attributes">
+            <dt id="widl-DtlsRole-client"><code>client</code></dt>
+            <dd>
+              Instructs the browser to act as a DTLS server when creating a <code><a>RealtimeTransport</a></code>.  The browser acts as a DTLS client and initiates the DTLS handshake.
+            </dd>
+
+            <dt id="widl-DtlsRole-server"><code>server</code></dt>
+            <dd>
+              Instructs the browser to act as a DTLS server when creating a <code><a>RealtimeTransport</a></code>.  The browser waits for the remote peer to initiate the DTLS handshake.
+            </dd>
+          </dl>
+        </section>
+
+        <section>
+          <h4>Certificate Validation Callback</h4>
+          <p>
+            This callback method is invoked when a DTLS transport is being created.  It allows the application to block the creation of a new transport based on the identity of the peer.
+          </p>
+          <pre class="pseudoidl">
+<span id="idl-def-CertificateValidationCallback" class="idlCallback">callback <span class="idlDictionaryID">CertificateValidationCallback</span> = boolean (<span class="idlParamType">RemoteCertificateInformation</span> <span class="idlParamName">remoteCertificate</span>);</span>
+          </pre>
+          <p>
+            The callback is passed information about the certificate offered by the remote peer.  The application can make a decision based on this and either return <code>true</code> to indicate that the transport creation should proceed, or <code>false</code> to indicate that the transport creation should be aborted.
+          </p>
+        </section>
+
+        <section>
+          <h4>Certificate Information</h4>
+          <p>
+            Information about an X.509 certificate, as used with DTLS.
+          </p>
+          <p>
+            This is another candidate for moving to another working group.
+          </p>
+          <p class="note">
+            Users are expected to make their own determination about trustworthiness based on the feedback information presented in browser chrome.  Certificate information allows application developers a better way of building more trustworthy applications.
+          </p>
+          <dl title="interface CertificateInformation" class="idl">
+            <dt>static CertificateInformation getLocalCertificate()</dt>
+            <dd>
+              This method retrieves the certificate that the browser will use for creating real-time transport.  The application can use this information to signal to peers.
+            </dd>
+            
+            <dt>readonly attribute ArrayBuffer certificate</dt>
+            <dd>
+              The DER-encoded certificate information.
+            </dd>
+            <dt>readonly attribute DOMString subject</dt>
+            <dd>
+              The subject of the certificate, using the string encoding from RFC 4514.
+            </dd>
+            <dt>readonly attribute CertificateFingerprints fingerprint</dt>
+            <dd>
+              A dictionary containing fingerprints for the certificate.  Keys are the <a href="http://www.iana.org/assignments/hash-function-text-names/hash-function-text-names.xml">textual name for the hash function</a>; the corresponding value for each is an <code>ArrayBuffer</code> containing the value of the fingerprint.  Browsers MUST implement SHA-1 (<code>sha-1</code>) and SHA-2 256 (<code>sha-256</code>).
+            </dd>
+          </dl>
+        </section>
+
+        <section>
+          <h4>Remote Certificate Information</h4>
+          <p>
+            Information about a remotely proffered X.509 certificate, which includes all the basic certificate information, plus fields that reveal what knowledge the browser has about trust (for instance, is this a valid domain certificate).
+          </p>
+          <p>For example, an application might register the following <code>CertificateValidationCallback</code> to check that it is talking to the expected domain:
+          </p>
+          <pre class="example">
+function validateCertificate(certInfo) {
+    return certInfo.isValidForDomain('example.com');
+}
+          </pre>
+
+          <dl title="[NoInterfaceObject] interface RemoteCertificateInformation : CertificateInformation" class="idl">
+            <dt>boolean isValidForDomain(DOMString domainName)</dt>
+            <dd>
+              This method returns true iff the certificate chains to one of the trust anchors configured in the browser for the specified domain name.  This allows an application to validate that a peer is offering a valid certificate for its domain.
+            </dd>
+          </dl>
+        </section>
+
+        <section>
+          <h4>SRTP Security Descriptions</h4>
+          <p>
+            This dictionary describes the parameters necessary to interoperably configure an SRTP stream.  Default values are the defaults defined in [[!RFC3711]].
+          </p>
+          <dl title="dictionary SrtpSecurityDescription" class="idl">
+            <dt>DOMString encrypt = "AES-CM"</dt>
+            <dd>
+              The SRTP cipher to use for encrypting packets.
+            </dd>
+            <dt>boolean encryptRtp = true</dt>
+            <dd>
+              Whether to encrypt RTP packets on this flow.
+            </dd>
+            <dt>boolean encryptRtcp = true</dt>
+            <dd>
+              Whether to encrypt RTCP packets on this flow.
+            </dd>
+            <dt>unsigned short keystreamPrefix = 0</dt>
+            <dd>
+              The number of bits to reserve from the keystream for use in authenticating each encoded packet.
+            </dd>
+            <dt>DOMString authenticate = "HMAC-SHA1"</dt>
+            <dd>
+              The packet authentication algorithm used.
+            </dd>
+            <dt>unsigned short n_a = 160</dt>
+            <dd>
+              The number of bits in the authentication output.
+            </dd>
+            <dt>unsigned short n_tag = 80</dt>
+            <dd>
+              The number of bits from the authentication output to append to the packet.
+            </dd>
+            <dt>DOMString keyDerivation = "AES-CM"</dt>
+            <dd>
+              The algorithm to use for key derivation.
+              </dd>
+            <dt>unsigned long keyDerivationInterval = 0</dt>
+            <dd>
+              The packet index at which new keys are derived.  A value of 0 indicates that new keys are never derived.
+            </dd>
+            <dt>ArrayBuffer key</dt>
+            <dd>
+              The master key.  The size of this ArrayBuffer determines <code>n_a</code>.
+            </dd>
+            <dt>ArrayBuffer salt</dt>
+            <dd>
+              The master salt.  The size of this ArrayBuffer determines <code>n_s</code>.
+            </dd>
+            <dt>unsigned long? windowSizeHint</dt>
+            <dd>
+              A hint to a receiver that indicates how large a replay protection window it is requested to maintain.  This value MAY be ignored.
+            </dd>
+            <dt>unsigned long long rtpPacketCount = 281474976710656</dt>
+            <dd>
+              The number of packets that can be safely encrypted using this scheme for RTP.  Default value of 2<sup>48</sup>.
+            </dd>
+            <dt>unsigned long long rtcpPacketCount = 2147483648</dt>
+            <dd>
+              The number of packets that can be safely encrypted using this scheme for RTCP.  Default value of 2<sup>31</sup>.
+            </dd>
+            <dt>ArrayBuffer? mki</dt>
+            <dd>
+              The optional master key index.  The size of the ArrayBuffer determines the size.
+            </dd>
+          </dl>
+        </section>
+      </section>
+
+      <section>
+        <h3>Transport Creation Callback</h3>
+        <p>
+          This callback function is invoked when a transport is created.
+        </p>
+        <pre class="pseudoidl">
+<span id="idl-def-TransportCallback" class="idlCallback">callback <span class="idlDictionaryID">TransportCallback</span> = void (<span class="idlParamType">DOMString</span> <span class="idlParamName">error</span>, <span class="idlParamType">RealtimeTransport</span> <span class="idlParamName">transport</span>);</span>
+        </pre>
+        <p>
+          The callback is called when a <code>RealtimeTransport</code> is created.
+        </p>
+        <p>
+          If the transport creation was successful, the <code>error</code> argument is <code>null</code> and the <code>transport</code> argument contains the newly created <code>RealtimeTransport</code>.
+        </p>
+        <p>
+          If the creation was unsuccessful, the <code>error</code> argument contains a string describing the error and the <code>transport</code> argument is <code>null</code>.
+        </p>
+      </section>
+
+      <section>
+        <h3>Unknown SSRC Event Handler</h3>
+        <p>
+          This event handler is invoked when an SSRC for which there is no corresponding <code><a>RealtimeMediaStream</a></code> is observed.
+        </p>
+        <pre class="pseudoidl">
+<span id="idl-def-UnknownSsrcEventHandler" class="idlCallback">callback <span class="idlDictionaryID">UnknownSsrcEventHandler</span> = void (<span class="idlParamType">UnknownSsrcEvent</span> <span class="idlParamName">event</span>);</span>
+        </pre>
+      </section>
+
+      <section>
+        <h3>Unknown SSRC Event</h3>
+        <p>
+          This event indicates that an SSRC arrived for which there was no corresponding RTP stream.
+        </p>
+        <dl title="[Constructor(UnknownSsrcEventInit)] interface UnknownSsrcEvent : Event" class="idl">
+          <dt>attribute unsigned long ssrc</dt>
+          <dd>
+            The SSRC of the unrecognized packet.
+          </dd>
+        </dl>
+        <dl title="dictionary UnknownSsrcEventInit : EventInit" class="idl">
+          <dt>attribute unsigned long ssrc</dt>
+          <dd>
+            The SSRC of the unrecognized packet.
+          </dd>
+          <dt>attribute byte packetType</dt>
+          <dd>
+            The packet type of the unrecognized packet.  This can help with packet demultiplexing if the SSRC is not already known.
+          </dd>
+        </dl>
+      </section>
     </section>
 
     <section>
@@ -701,6 +1246,10 @@ enum <span class="idlInterfaceID"><a id="widl-RtcpFeature">RtcpFeature</a></span
           <dd>
             The ICE password for the candidate.  This should be set unless this is being used to describe a STUN or TURN server that doesn't require authentication.
           </dd>
+          <dt>unsigned long priority = 0</dt>
+          <dd>
+            The ICE priority for the candidate.
+          </dd>
         </dl>
 
       </section>
@@ -737,9 +1286,14 @@ enum <span class="idlInterfaceID"><a id="widl-RtcpFeature">RtcpFeature</a></span
             The ICE password for the port.
           </dd>
 
+          <dt>readonly attribute unsigned long priority</dt>
+          <dd>
+            The ICE priority for the candidate.  This priority allows for prioritization of checks.  This parameter is added to all checks sent by the candidate.
+          </dd>
+
           <dt>static void openLocalPorts (RealtimePortCallback callback)</dt>
           <dd>
-            Open ports on the local host.  One port is opened for each network interface on the host.  Calls the provided callback when complete.
+            Open ports on the local host.  One <code><a>RealtimePort</a></code> is opened for each network interface on the host.  Calls the provided callback when complete, passing the ports that were opened as a result of the function call.  Ports are provided to the callback in priority order.
           </dd>
 
           <dt>static void allocateRelay (TurnServer turnServer, RealtimePortCallback callback)</dt>
@@ -751,7 +1305,7 @@ enum <span class="idlInterfaceID"><a id="widl-RtcpFeature">RtcpFeature</a></span
             <a href="allocateRelay">Allocate a relay port on a TURN server</a> over UDP using this local real-time port as the base.
           </dd>
           
-          <dt>[TreatNonCallableAsNull] attribute EventHandler? onnetworkchange</dt>
+          <dt>[TreatNonCallableAsNull] attribute EventHandler onnetworkchange</dt>
           <dd>
             An event handler for being informed of <a href="#networkchange">changes to network connectivity</a>.  <b>Note</b>: This is a candidate for moving to <code>navigator</code> or even the <a href="http://www.w3.org/TR/netinfo-api/">network information API</a>.
           </dd>
@@ -771,7 +1325,17 @@ enum <span class="idlInterfaceID"><a id="widl-RtcpFeature">RtcpFeature</a></span
             Called when a remote peer <a href="#serving">successfully performs a connectivity check</a> against this port.
           </dd>
 
-          <dt>[TreatNonCallableAsNull] attribute EventHandler? onclose</dt>
+          <dt>void setServerAttributes(sequence<StunAttribute> serverAttributes)</dt>
+          <dd>
+            Define a set of attributes that the port will add to STUN Binding check responses.  Attributes with a value will be sent verbatim, attributes with no value set will be echoed from the request, but only if the request includes that attribute.
+          </dd>
+
+          <dt>readonly attribute sequence<StunAttribute> serverAttributes</dt>
+          <dd>
+            The set of attributes that the port will add to STUN Binding check responses.
+          </dd>
+
+          <dt>[TreatNonCallableAsNull] attribute EventHandler onclose</dt>
           <dd>
             Invoked when the real-time port is closed.
           </dd>
@@ -847,7 +1411,7 @@ enum <span class="idlInterfaceID"><a id="widl-RtcpFeature">RtcpFeature</a></span
             The <code>onchecksent</code> event does not include either STUN message because revealing the STUN transaction identifier chosen by the browser could allow a web attacker to spoof a response.
           </p>
 
-        <dl title="interface ConnectivityCheckEvent : Event" class="idl">
+        <dl title="[Constructor(ConnectivityCheckEventInit)] interface ConnectivityCheckEvent : Event" class="idl">
           <dt>attribute RemoteRealtimePort remote</dt>
           <dd>
             This identifies the remote port involved in this connectivity check.  For incoming checks, the remote port information only includes <code>ip</code> and <code>port</code>.
@@ -861,6 +1425,19 @@ enum <span class="idlInterfaceID"><a id="widl-RtcpFeature">RtcpFeature</a></span
           <dt>attribute StunBinding? response</dt>
           <dd>
             For the <code>onchecksuccess</code> and <code>onremotecheck</code> events, this includes the STUN Binding response that was respectively received or sent.  For the <code>onchecksent</code> event, this attribute is <code>null</code>.
+          </dd>
+        </dl>
+        <dl title="dictionary ConnectivityCheckEventInit : EventInit" class="idl">
+          <dt>attribute RemoteRealtimePort remote</dt>
+          <dd>
+          </dd>
+          
+          <dt>attribute StunBinding? request</dt>
+          <dd>
+          </dd>
+
+          <dt>attribute StunBinding? response</dt>
+          <dd>
           </dd>
         </dl>
         </section>
@@ -1001,7 +1578,7 @@ enum <span class="idlInterfaceID"><a id="widl-TurnRelayTransport">TurnRelayTrans
         <section id="checking">
           <h4>Sending Connectivity Checks</h4>
           <p>
-            Applications can request the sending of a STUN Binding request to perform a connectivity check or collect additional addressing information.  The browser performs a connectivity check by sending a STUN Binding request using <code><var>candidate</var>.<a>check</a>(<var>remotePort</var>, <var>callback</var>[, <var>attributes</var>])</code>.
+            Applications can request the sending of a STUN Binding request to perform a connectivity check or collect additional addressing information.  The browser performs a connectivity check by sending a STUN Binding request using <code><var>port</var>.<a href="#widl-RealtimePort-check-long-RemoteRealtimePort-remote-StunAttribute-attributes">check</a>(<var>remotePort</var>, <var>callback</var>[, <var>attributes</var>])</code>.
           </p>
           <p>
             The browser invokes the callback function if the connectivity check successfully completes.  The STUN request and response messages are passed to the callback.
@@ -1064,6 +1641,9 @@ enum <span class="idlInterfaceID"><a id="widl-TurnRelayTransport">TurnRelayTrans
           <p>
             Browsers respond to connectivity checks on each port that it opens.  The browser MUST limit the number of unique peers that it generates connectivity check responses for.  This ensures that the number of flows that can be created towards the browser from different browsers is limited.  This mitigates an attack where a web attacker shares open port information with multiple browsers.
           </p>
+          <p>
+            STUN attributes that are provided to the application MUST NOT include any attributes that are not covered by the <code>MESSAGE-INTEGRITY</code> attribute.
+          </p>
         </section>
 
         <section>
@@ -1071,7 +1651,11 @@ enum <span class="idlInterfaceID"><a id="widl-TurnRelayTransport">TurnRelayTrans
           <p>
             The <code><dfn>StunBinding</dfn></code> object contains information necessary to construct and interpret STUN Binding requests.
           </p>
-          <dl title="interface StunBinding" class="idl">
+          <dl title="[NoInterfaceObject] interface StunBinding" class="idl">
+            <dt>readonly attribute Date timestamp</dt>
+            <dd>
+              The time that the STUN Binding request or response was sent or received (respectively).
+            </dd>
             <dt>readonly attribute ArrayBuffer transactionId</dt>
             <dd>
               The STUN transaction ID is selected by the browser.  This object is only provided to users once a STUN transaction has successfully completed, ensuring that STUN responses cannot be spoofed by web attackers.
@@ -1135,7 +1719,7 @@ enum <span class="idlInterfaceID"><a id="widl-TurnRelayTransport">TurnRelayTrans
           The <code><dfn>networkchange</dfn></code> event is registered against a local <code><a>RealtimePort</a></code>.
         </p>
         <p class="note">
-          Ideally, this would be globally registered, but since <code><a>RealtimePort</a></code> doesn't have a constructor, this might not be necessary.  Again, ideally this is something for the <a href="http://www.w3.org/TR/netinfo-api/">network information API</a> to solve.
+          Ideally, this would be globally registered, but since events can't originate on static objects, this is difficult.  Again, ideally this is something for the <a href="http://www.w3.org/TR/netinfo-api/">network information API</a> to solve.
         </p>
         <p>
           The browser fires a <code><a>networkchange</a></code> event when it detects a potential change in the status of the network.  Events that trigger this callback include changes to open network interfaces and the addition or removal of network interfaces.
@@ -1155,306 +1739,11 @@ enum <span class="idlInterfaceID"><a id="widl-TurnRelayTransport">TurnRelayTrans
         </p>
       </section>
     </section>
-
-    <section>
-      <h2>Real-Time Transport</h2>
-      
-      <p>
-        A <dfn>RealtimeTransport</dfn> represents the flow of packets between a local and a remote real-time port.
-      </p>
-      <p>
-        Upon creation, a <code><a>RealtimeTransport</a></code> beings automatically generating connectivity checks toward the selected remote peer.  If a consent check fails, the transport remains open, but no packets can be sent.
-      </p>
-      <section>
-        <h3>The <code>RealtimeTransport</code> Object</h3>
-        <dl title="interface RealtimeTransport : EventTarget" class="idl">
-          <dt>void createTransport (RealtimePort local, RemoteRealtimePort remote, TransportOptions options, TransportCallback callback)</dt>
-          <dd>
-            Factory method for creating a transport.
-          </dd>
-          
-          <dt>readonly attribute RealtimePort localPort</dt>
-          <dd>
-            The local real-time port that is used for this transport.
-          </dd>
-          <dt>readonly attribute SimpleRealtimePort remotePort</dt>
-          <dd>
-            The remote real-time port that is used for this transport.
-          </dd>
-          <dt>readonly attribute boolean dtls</dt>
-          <dd>
-            Whether key negotiation for the transport is being controlled using DTLS.
-          </dd>
-          <dt>readonly attribute RemoteCertificateInformation? remoteCertificate</dt>
-          <dd>
-            Information about the certificate offered by the remote peer.  This attribute is only set if the transport is using DTLS for key negotiation.
-          </dd>
-
-          <dt>readonly attribute SrtpSecurityDescription? outboundSdes</dt>
-          <dd>
-            The SRTP security description for outbound media.
-          </dd>
-          <dt>readonly attribute SrtpSecurityDescription? inboundSdes</dt>
-          <dd>
-            The SRTP security description for inbound media.
-          </dd>
-
-          <dt>readonly attribute boolean open</dt>
-          <dd>
-            Whether the transport is currently open and able to receive data.  Newly created transports always start with this value set to <code>true</code>.  Note that absence or expiry of consent from the remote peer can cause a transport to be unable to send on an open transport.
-          </dd>
-          <dt>readonly attribute unsigned long bandwidth</dt>
-          <dd>
-            The maximum available bandwidth on this transport, as detected by the browser.  This value can change over time.  Users of the transport operate within this envelope; packets that exceed this limit within any interval (browser-selected) are discarded.
-          </dd>
-          <dt>void close()</dt>
-          <dd>
-            This closes the transport.
-          </dd>
-          <dt>attribute EventHandler? onclose</dt>
-          <dd>
-            This event callback is fired when the transport is closed.
-          </dd>
-          <dt>readonly attribute boolean consent</dt>
-          <dd>
-            Whether the transport is currently open and able to send data.  This depends on there being a successful consent check toward the remote peer within a browser-configured period.  This valid is <code>false</code> when consent toward the remote peer has expired.
-          </dd>
-          <dt>attribute EventHandler? onconsent</dt>
-          <dd>
-            This event callback is fired when consent checks toward the remote peer succeed after having failed.
-          </dd>
-          <dt>attribute EventHandler? onconsentexpired</dt>
-          <dd>
-            This event callback is fired when consent checks toward the remote peer time out and no packets are able to be sent on this transport.
-          </dd>
-          <dt>attribute EventHandler? onbandwidthchange</dt>
-          <dd>
-            This event callback is fired when the browser learns of a change in available bandwidth on the transport.  The browser MAY limit the rate of notifications, or suppress notification for small (10% or less) changes in available bandwidth.
-          </dd>
-          <dt>attribute unsigned long? inactivityInterval</dt>
-          <dd>
-            This attribute can be set to determine when the <code>oninactive</code> event is fired.
-          </dd>
-          <dt>attribute EventHandler? oninactive</dt>
-          <dd>
-            This event is fired when the transport has been inactive for <code>inactivityInterval</code> milliseconds.  That is, the time since the last packet was received from the peer exceeds the specified time.
-          </dd>
-        </dl>
-      </section>
-
-      <section>
-        <h3>Transport Creation Options</h3>
-        <p>
-          Specifying <code><dfn>RealtimeTransportOptions</dfn></code> can be used to alter the characteristics of a transport.
-        </p>
-        <dl title="dictionary RealtimeTransportOptions">
-          <dt>RealtimeTransportMode mode = "dtls-srtp"</dt>
-          <dd>
-            The mode used for the transport.
-          </dd>
-          <dt>SrtpSecurityDescription outboundSdes</dt>
-          <dd>
-            A description of the security parameters for outbound streams of RTP media secured with SRTP [[!RFC3711]].  Used only when SRTP keys are negotiated through signaling.
-          </dd>
-          <dt>SrtpSecurityDescription inboundSdes</dt>
-          <dd>
-            A description of the security parameters for inbound streams of RTP media secured with SRTP [[!RFC3711]].  Used only when SRTP keys are negotiated through signaling.
-          </dd>
-          <dt>DtlsRole? role</dt>
-          <dd>
-            The role that the local browser takes in the DTLS [[!RFC5764]] handshake, either 'client' or 'server'.
-          </dd>
-          <dt>CertificateValidationCallback validate</dt>
-          <dd>
-            This callback is triggered when the certificate for the remote peer is received.  This allows the application to accept or reject a peer based on the proffered certificate.  This is only valid for a DTLS transport.  When omitted, the certificates is automatically accepted.
-          </dd>
-          <dt>sequence&lt;DOMString> cipherSuites</dt>
-          <dd>
-            A set of DTLS cipher suites that can be negotiated for DTLS, using the <q>Description</q> from the <a href="http://www.iana.org/assignments/tls-parameters/tls-parameters.xml#tls-parameters-3">TLS cipher suite registry</a>.  The browser cannot negotiate any suite that is not included in this set.
-          </dd>
-        </dl>
-        <section>
-          <h4>Real-Time Transport Modes</h4>
-          <p>
-            </p>
-          <pre class="pseudoidl">
-enum <span class="idlInterfaceID"><a id="widl-RealtimeTransportMode">RealtimeTransportMode</a></span> {
-    "<a href="#widl-RealtimeTransportMode-srtp">srtp</a>", "<a href="#widl-RealtimeTransportMode-dtls-srtp">dtls-srtp</a>"
-};
-          </pre>
-          <!-- <dl title="enum DtlsRole" class="enum" data-transform="transformEnum">-->
-          <dl class="attributes">
-            <dt id="widl-RealtimeTransportMode-srtp"><code>srtp</code></dt>
-            <dd>
-              Instructs the browser to create a <code><a>RealtimeTransport</a></code> using SRTP.  When this option is chosen, the <code><a>RealtimeTransportOptions</a></code> MUST also include <code><a href="#widl-RealtimeTransportOptions-outboundSdes">outboundSdes</a></code> and <code><a href="#widl-RealtimeTransportOptions-inboundSdes">inboundSdes</a></code>.
-            </dd>
-            <dt id="widl-RealtimeTransportMode-dtls-srtp"><code>dtls-srtp</code></dt>
-            <dd>
-              Instructs the browser to create a <code><a>RealtimeTransport</a></code> using DTLS-SRTP [[!RFC5764]].  When this option is chosen, the <code><a>RealtimeTransportOptions</a></code> MUST also include <code><a href="#widl-RealtimeTransportOptions-role">role</a></code> and it SHOULD include <code><a href="#widl-RealtimeTransportOptions-validate">validate</a></code>.
-            </dd>
-          </dl>
-        </section>
-        <section>
-          <h4>DTLS Roles</h4>
-          <p>
-            DTLS Roles are applicable when creating a transport over DTLS.  This option determines whether the local browser is in the client or server role.
-          </p>
-          <pre class="pseudoidl">
-enum <span class="idlInterfaceID"><a id="widl-DtlsRole">DtlsRole</a></span> {
-    "<a href="#widl-DtlsRole-client">client</a>", "<a href="#widl-DtlsRole-server">server</a>"
-};
-          </pre>
-          <!-- <dl title="enum DtlsRole" class="enum" data-transform="transformEnum">-->
-          <dl class="attributes">
-            <dt id="widl-DtlsRole-client"><code>client</code></dt>
-            <dd>
-              Instructs the browser to act as a DTLS server when creating a <code><a>RealtimeTransport</a></code>.  The browser acts as a DTLS client and initiates the DTLS handshake.
-            </dd>
-
-            <dt id="widl-DtlsRole-server"><code>server</code></dt>
-            <dd>
-              Instructs the browser to act as a DTLS server when creating a <code><a>RealtimeTransport</a></code>.  The browser waits for the remote peer to initiate the DTLS handshake.
-            </dd>
-          </dl>
-        </section>
-        <section>
-          <h4>Certificate Validation Callback</h4>
-          <p>
-            This callback method is invoked when a DTLS transport is being created.  It allows the application to block the creation of a new transport based on the identity of the peer.
-          </p>
-          <pre class="pseudoidl">
-<span id="idl-def-CertificateValidationCallback" class="idlCallback">callback <span class="idlDictionaryID">CertificateValidationCallback</span> = boolean (<span class="idlParamType">RemoteCertificateInformation</span> <span class="idlParamName">remoteCertificate</span>);</span>
-          </pre>
-          <p>
-            The callback is passed information about the certificate offered by the remote peer.  The application can make a decision based on this and either return <code>true</code> to indicate that the transport creation should proceed, or <code>false</code> to indicate that the transport creation should be aborted.
-          </p>
-        </section>
-        <section>
-          <h4>Certificate Information</h4>
-          <p>
-            Information about an X.509 certificate, as used with DTLS.
-          </p>
-          <p>
-            This is another candidate for moving to another working group.
-          </p>
-          <p class="note">
-            Users are expected to make their own determination about trustworthiness based on the feedback information presented in browser chrome.  Certificate information allows application developers a better way of building more trustworthy applications.
-          </p>
-          <dl title="[NoInterfaceObject] interface CertificateInformation" class="idl">
-            <dt>static CertificateInformation getLocalCertificate()</dt>
-            <dd>
-              This method retrieves the certificate that the browser will use for creating real-time transport.  The application can use this information to signal to peers.
-            </dd>
-            
-            <dt>readonly attribute ArrayBuffer certificate</dt>
-            <dd>
-              The DER-encoded certificate information.
-            </dd>
-            <dt>readonly attribute DOMString subject</dt>
-            <dd>
-              The subject of the certificate, using the string encoding from RFC 4514.
-            </dd>
-            <dt>readonly attribute CertificateFingerprints fingerprint</dt>
-            <dd>
-              A dictionary containing fingerprints for the certificate.  Keys are the <a href="http://www.iana.org/assignments/hash-function-text-names/hash-function-text-names.xml">textual name for the hash function</a>; the corresponding value for each is an <code>ArrayBuffer</code> containing the value of the fingerprint.  Browsers MUST implement SHA-1 (<code>sha-1</code>) and SHA-2 256 (<code>sha-256</code>).
-            </dd>
-          </dl>
-        </section>
-        <section>
-          <h4>Remote Certificate Information</h4>
-          <p>
-            Information about a remotely proffered X.509 certificate, which includes all the basic certificate information, plus fields that reveal what knowledge the browser has about trust (for instance, is this a valid domain certificate).
-          </p>
-          <p>For example, an application might register the following <code>CertificateValidationCallback</code> to check that it is talking to the expected domain:
-          </p>
-          <pre class="example">
-function validateCertificate(certInfo) {
-    return certInfo.isValidForDomain('example.com');
-}
-          </pre>
-
-          <dl title="[NoInterfaceObject] interface RemoteCertificateInformation : CertificateInformation" class="idl">
-            <dt>boolean isValidForDomain(DOMString domainName)</dt>
-            <dd>
-              This method returns true iff the certificate chains to one of the trust anchors configured in the browser for the specified domain name.  This allows an application to validate that a peer is offering a valid certificate for its domain.
-            </dd>
-          </dl>
-        </section>
-        <section>
-          <h4>SRTP Security Descriptions</h4>
-          <p>
-            This dictionary describes the parameters necessary to interoperably configure an SRTP stream.  Default values are the defaults defined in [[!RFC3711]].
-          </p>
-          <dl title="dictionary SrtpSecurityDescription" class="idl">
-            <dt>DOMString encrypt = "AES-CM"</dt>
-            <dd>
-              The SRTP cipher to use for encrypting packets.
-            </dd>
-            <dt>boolean encryptRtp = true</dt>
-            <dd>
-              Whether to encrypt RTP packets on this flow.
-            </dd>
-            <dt>boolean encryptRtcp = true</dt>
-            <dd>
-              Whether to encrypt RTCP packets on this flow.
-            </dd>
-            <dt>unsigned short keystreamPrefix = 0</dt>
-            <dd>
-              The number of bits to reserve from the keystream for use in authenticating each encoded packet.
-            </dd>
-            <dt>DOMString authenticate = "HMAC-SHA1"</dt>
-            <dd>
-              The packet authentication algorithm used.
-            </dd>
-            <dt>unsigned short n_a = 160</dt>
-            <dd>
-              The number of bits in the authentication output.
-            </dd>
-            <dt>unsigned short n_tag = 80</dt>
-            <dd>
-              The number of bits from the authentication output to append to the packet.
-            </dd>
-            <dt>DOMString keyDerivation = "AES-CM"</dt>
-            <dd>
-              The algorithm to use for key derivation.
-              </dd>
-            <dt>unsigned long keyDerivationInterval = 0</dt>
-            <dd>
-              The packet index at which new keys are derived.  A value of 0 indicates that new keys are never derived.
-            </dd>
-            <dt>ArrayBuffer key</dt>
-            <dd>
-              The master key.  The size of this ArrayBuffer determines <code>n_a</code>.
-            </dd>
-            <dt>ArrayBuffer salt</dt>
-            <dd>
-              The master salt.  The size of this ArrayBuffer determines <code>n_s</code>.
-            </dd>
-            <dt>unsigned long? windowSizeHint</dt>
-            <dd>
-              A hint to a receiver that indicates how large a replay protection window it is requested to maintain.  This value MAY be ignored.
-            </dd>
-            <dt>unsigned long long rtpPacketCount = 281474976710656</dt>
-            <dd>
-              The number of packets that can be safely encrypted using this scheme for RTP.  Default value of 2<sup>48</sup>.
-            </dd>
-            <dt>unsigned long long rtcpPacketCount = 2147483648</dt>
-            <dd>
-              The number of packets that can be safely encrypted using this scheme for RTCP.  Default value of 2<sup>31</sup>.
-            </dd>
-            <dt>ArrayBuffer? mki</dt>
-            <dd>
-              The optional master key index.  The size of the ArrayBuffer determines the size.
-            </dd>
-          </dl>
-        </section>
-      </section>
-    </section>
     
     <section class="appendix">
       <h2>Acknowledgements</h2>
       <p>
-        Thanks to Matthew Kaufman who provided a few key suggestions that resulted in an almost total removal of browser-based state.  Travis Leithead provided guidance on modern web API design that was invaluable.  Bernard Aboba and Tim Moore provided input on mapping media to RTP streams.
+        Travis Leithead provided guidance on modern web API design that was invaluable.  Tim Moore provided input on mapping media to RTP streams.
       </p>
     </section>
 </html>
