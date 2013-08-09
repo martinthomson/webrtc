@@ -699,6 +699,10 @@ builder.start();
             <p>Starts or restarts the transport builder.  The transport builder will perform the ICE process as though for a single component.</p>
             <p>It is possible invoke this method multiple times, where each subsequent invocation triggers a restart of ICE processing.  While running, the builder will automatically restart the process if it detects network events that necessitate a restart.
           </dd>
+          <dt>void addRemote(RemoteRealtimePort remotePort)</dt>
+          <dd>
+            Adds information about a remote port to the transport builder.
+          </dd>
           <dt>void stop()</dt>
           <dd>
             Stops the transport builder.  Any ports or transports that may have been opened while the builder was running remain open and can continue to be used.
@@ -726,7 +730,7 @@ builder.start();
           <p>
             A <code><dfn>RealtimeTransportBuilderOptions</dfn></code> contains all the information necessary to establish a peer-to-peer transport using <code>RealtimeTransportBuilder</code>.  All values, except <code>transport</code> are optional.
           </p>
-          <dl title="dictionary RealtimeTransportOptions" class="idl">
+          <dl title="dictionary RealtimeTransportBuilderOptions" class="idl">
             <dt>RealtimeTransportOptions transport</dt>
             <dd>
               Options to use in the creation of a <code><a>RealtimeTransport</a></code>.
